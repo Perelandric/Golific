@@ -3,12 +3,16 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
+	"time"
 )
 
 func main() {
 	log.SetFlags(0)
 	log.SetPrefix("enum: ")
+
+	rand.Seed(time.Now().UnixNano())
 
 	var data EnumData
 

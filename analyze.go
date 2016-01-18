@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"log"
+	"math/rand"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -33,6 +34,7 @@ type EnumRepr struct {
 	flags    uint
 	FlagSep  string
 	iterName string
+	unique   string
 	Fields   []*FieldRepr
 }
 
@@ -69,6 +71,13 @@ func (self *EnumData) DoFile(file string) error {
 	}
 
 	return nil
+}
+
+func (self *EnumRepr) GetUniqueName() string {
+	if self.unique == "" {
+		self.unique = "value_" + strconv.FormatInt(rand.Int63(), 36)
+	}
+	return self.unique
 }
 
 func (self *EnumRepr) JsonMarshalIsString() bool {

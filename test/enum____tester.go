@@ -12,16 +12,16 @@ FooEnum - bit flags
 
 ******************************/
 
-type FooEnum struct{ value uint8 }
+type FooEnum struct{ value_p6kpk974c9pm uint8 }
 
 var Foo = struct {
 	Bar FooEnum
 	Baz FooEnum
 	Buz FooEnum
 }{
-	Bar: FooEnum{value: 1},
-	Baz: FooEnum{value: 2},
-	Buz: FooEnum{value: 4},
+	Bar: FooEnum{value_p6kpk974c9pm: 1},
+	Baz: FooEnum{value_p6kpk974c9pm: 2},
+	Buz: FooEnum{value_p6kpk974c9pm: 4},
 }
 
 // Used to iterate in range loops
@@ -31,16 +31,16 @@ var foobar = [...]FooEnum{
 
 // Get the integer value of the enum variant
 func (self FooEnum) Value() uint8 {
-	return self.value
+	return self.value_p6kpk974c9pm
 }
 
 func (self FooEnum) IntValue() int {
-	return int(self.value)
+	return int(self.value_p6kpk974c9pm)
 }
 
 // Get the string representation of the enum variant
 func (self FooEnum) String() string {
-	switch self.value {
+	switch self.value_p6kpk974c9pm {
 	case 1:
 		return "bar"
 	case 2:
@@ -49,14 +49,14 @@ func (self FooEnum) String() string {
 		return "Buz"
 	}
 
-	if self.value == 0 {
+	if self.value_p6kpk974c9pm == 0 {
 		return ""
 	}
 
 	var vals = make([]string, 0, 3/2)
 
 	for _, item := range foobar {
-		if self.value&item.value == item.value {
+		if self.value_p6kpk974c9pm&item.value_p6kpk974c9pm == item.value_p6kpk974c9pm {
 			vals = append(vals, item.String())
 		}
 	}
@@ -65,7 +65,7 @@ func (self FooEnum) String() string {
 
 // Get the string description of the enum variant
 func (self FooEnum) Description() string {
-	switch self.value {
+	switch self.value_p6kpk974c9pm {
 	case 1:
 		return "bar"
 	case 2:
@@ -92,13 +92,13 @@ func (self *FooEnum) UnmarshalJSON(b []byte) error {
 
 	switch s {
 	case "bar":
-		self.value = 1
+		self.value_p6kpk974c9pm = 1
 		return nil
 	case "baz":
-		self.value = 2
+		self.value_p6kpk974c9pm = 2
 		return nil
 	case "Buz":
-		self.value = 4
+		self.value_p6kpk974c9pm = 4
 		return nil
 	}
 
@@ -117,42 +117,42 @@ func (self *FooEnum) UnmarshalJSON(b []byte) error {
 		}
 	}
 
-	self.value = uint8(val)
+	self.value_p6kpk974c9pm = uint8(val)
 	return nil
 }
 
 // Bitflag enum methods
 func (self FooEnum) Add(v FooEnum) FooEnum {
-	self.value |= v.value
+	self.value_p6kpk974c9pm |= v.value_p6kpk974c9pm
 	return self
 }
 
 func (self FooEnum) AddAll(v ...FooEnum) FooEnum {
 	for _, item := range v {
-		self.value |= item.value
+		self.value_p6kpk974c9pm |= item.value_p6kpk974c9pm
 	}
 	return self
 }
 
 func (self FooEnum) Remove(v FooEnum) FooEnum {
-	self.value &^= v.value
+	self.value_p6kpk974c9pm &^= v.value_p6kpk974c9pm
 	return self
 }
 
 func (self FooEnum) RemoveAll(v ...FooEnum) FooEnum {
 	for _, item := range v {
-		self.value &^= item.value
+		self.value_p6kpk974c9pm &^= item.value_p6kpk974c9pm
 	}
 	return self
 }
 
 func (self FooEnum) Has(v FooEnum) bool {
-	return self.value&v.value == v.value
+	return self.value_p6kpk974c9pm&v.value_p6kpk974c9pm == v.value_p6kpk974c9pm
 }
 
 func (self FooEnum) HasAny(v ...FooEnum) bool {
 	for _, item := range v {
-		if self.value&item.value == item.value {
+		if self.value_p6kpk974c9pm&item.value_p6kpk974c9pm == item.value_p6kpk974c9pm {
 			return true
 		}
 	}
@@ -161,7 +161,7 @@ func (self FooEnum) HasAny(v ...FooEnum) bool {
 
 func (self FooEnum) HasAll(v ...FooEnum) bool {
 	for _, item := range v {
-		if self.value&item.value != item.value {
+		if self.value_p6kpk974c9pm&item.value_p6kpk974c9pm != item.value_p6kpk974c9pm {
 			return false
 		}
 	}
@@ -174,16 +174,16 @@ OofEnum
 
 ******************************/
 
-type OofEnum struct{ value int8 }
+type OofEnum struct{ value_1404ufk3hj2w uint8 }
 
 var Oof = struct {
 	Bar OofEnum
 	Baz OofEnum
 	Buz OofEnum
 }{
-	Bar: OofEnum{value: 1},
-	Baz: OofEnum{value: 123},
-	Buz: OofEnum{value: 3},
+	Bar: OofEnum{value_1404ufk3hj2w: 1},
+	Baz: OofEnum{value_1404ufk3hj2w: 123},
+	Buz: OofEnum{value_1404ufk3hj2w: 3},
 }
 
 // Used to iterate in range loops
@@ -192,17 +192,17 @@ var OofValues = [...]OofEnum{
 }
 
 // Get the integer value of the enum variant
-func (self OofEnum) Value() int8 {
-	return self.value
+func (self OofEnum) Value() uint8 {
+	return self.value_1404ufk3hj2w
 }
 
 func (self OofEnum) IntValue() int {
-	return int(self.value)
+	return int(self.value_1404ufk3hj2w)
 }
 
 // Get the string representation of the enum variant
 func (self OofEnum) String() string {
-	switch self.value {
+	switch self.value_1404ufk3hj2w {
 	case 1:
 		return "bar"
 	case 123:
@@ -216,7 +216,7 @@ func (self OofEnum) String() string {
 
 // Get the string description of the enum variant
 func (self OofEnum) Description() string {
-	switch self.value {
+	switch self.value_1404ufk3hj2w {
 	case 1:
 		return "bar"
 	case 123:
@@ -236,6 +236,6 @@ func (self *OofEnum) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	self.value = int8(n)
+	self.value_1404ufk3hj2w = uint8(n)
 	return nil
 }

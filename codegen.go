@@ -54,6 +54,7 @@ import (
 )
 {{- range $repr := .Reprs}}
 {{- $intType := .GetIntType}}
+{{- $uniqField := .GetUniqueName}}
 
 /*****************************
 
@@ -61,7 +62,7 @@ import (
 
 ******************************/
 
-type {{$repr.Name}}Enum struct{ value {{$intType}} }
+type {{$repr.Name}}Enum struct{ {{$uniqField}} {{$intType}} }
 
 var {{$repr.Name}} = struct {
 	{{- range $f := .Fields}}
@@ -69,7 +70,7 @@ var {{$repr.Name}} = struct {
 	{{- end}}
 }{
 	{{- range $f := .Fields}}
-	{{$f.Name}}: {{$repr.Name}}Enum{ value: {{$f.Value}} },
+	{{$f.Name}}: {{$repr.Name}}Enum{ {{$uniqField}}: {{$f.Value}} },
 	{{- end}}
 }
 
@@ -80,16 +81,16 @@ var {{.GetIterName}} = [...]{{$repr.Name}}Enum{
 
 // Get the integer value of the enum variant
 func (self {{$repr.Name}}Enum) Value() {{$intType}} {
-	return self.value
+	return self.{{$uniqField}}
 }
 
 func (self {{$repr.Name}}Enum) IntValue() int {
-	return int(self.value)
+	return int(self.{{$uniqField}})
 }
 
 // Get the string representation of the enum variant
 func (self {{$repr.Name}}Enum) String() string {
-	switch self.value {
+	switch self.{{$uniqField}} {
 	{{range $f := .Fields -}}
 	case {{$f.Value}}:
 		return "{{$f.String}}"
@@ -97,14 +98,14 @@ func (self {{$repr.Name}}Enum) String() string {
   }
 
 	{{if .IsBitflag -}}
-	if self.value == 0 {
+	if self.{{$uniqField}} == 0 {
 		return ""
 	}
 
 	var vals = make([]string, 0, {{len .Fields}}/2)
 
 	for _, item := range {{.GetIterName}} {
-		if self.value & item.value == item.value {
+		if self.{{$uniqField}} & item.{{$uniqField}} == item.{{$uniqField}} {
 			vals = append(vals, item.String())
 		}
 	}
@@ -116,7 +117,7 @@ func (self {{$repr.Name}}Enum) String() string {
 
 // Get the string description of the enum variant
 func (self {{$repr.Name}}Enum) Description() string {
-  switch self.value {
+  switch self.{{$uniqField}} {
 	{{range $f := .Fields -}}
 	case {{$f.Value}}:
 		return "{{$f.Description}}"
@@ -149,7 +150,7 @@ func (self *{{$repr.Name}}Enum) UnmarshalJSON(b []byte) error {
 	switch s {
 	{{range $f := .Fields -}}
 	case "{{$f.String}}":
-		self.value = {{$f.Value}}
+		self.{{$uniqField}} = {{$f.Value}}
 		return nil
 	{{end -}}
 	{{if not .IsBitflag -}}
@@ -172,7 +173,7 @@ func (self *{{$repr.Name}}Enum) UnmarshalJSON(b []byte) error {
 		}
 	}
 
-	self.value = {{$intType}}(val)
+	self.{{$uniqField}} = {{$intType}}(val)
 	{{end -}}
 
 	return nil
@@ -183,7 +184,7 @@ func (self *{{$repr.Name}}Enum) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	self.value = {{$intType}}(n)
+	self.{{$uniqField}} = {{$intType}}(n)
 	return nil
 }
 {{- end}}
@@ -191,36 +192,36 @@ func (self *{{$repr.Name}}Enum) UnmarshalJSON(b []byte) error {
 {{- if .IsBitflag}}
 // Bitflag enum methods
 func (self {{$repr.Name}}Enum) Add(v {{$repr.Name}}Enum) {{$repr.Name}}Enum {
-	self.value |= v.value
+	self.{{$uniqField}} |= v.{{$uniqField}}
 	return self
 }
 
 func (self {{$repr.Name}}Enum) AddAll(v ...{{$repr.Name}}Enum) {{$repr.Name}}Enum {
 	for _, item := range v {
-		self.value |= item.value
+		self.{{$uniqField}} |= item.{{$uniqField}}
 	}
 	return self
 }
 
 func (self {{$repr.Name}}Enum) Remove(v {{$repr.Name}}Enum) {{$repr.Name}}Enum {
-	self.value &^= v.value
+	self.{{$uniqField}} &^= v.{{$uniqField}}
 	return self
 }
 
 func (self {{$repr.Name}}Enum) RemoveAll(v ...{{$repr.Name}}Enum) {{$repr.Name}}Enum {
 	for _, item := range v {
-		self.value &^= item.value
+		self.{{$uniqField}} &^= item.{{$uniqField}}
 	}
 	return self
 }
 
 func (self {{$repr.Name}}Enum) Has(v {{$repr.Name}}Enum) bool {
-	return self.value&v.value == v.value
+	return self.{{$uniqField}}&v.{{$uniqField}} == v.{{$uniqField}}
 }
 
 func (self {{$repr.Name}}Enum) HasAny(v ...{{$repr.Name}}Enum) bool {
 	for _, item := range v {
-		if self.value&item.value == item.value {
+		if self.{{$uniqField}}&item.{{$uniqField}} == item.{{$uniqField}} {
 			return true
 		}
 	}
@@ -229,7 +230,7 @@ func (self {{$repr.Name}}Enum) HasAny(v ...{{$repr.Name}}Enum) bool {
 
 func (self {{$repr.Name}}Enum) HasAll(v ...{{$repr.Name}}Enum) bool {
 	for _, item := range v {
-		if self.value&item.value != item.value {
+		if self.{{$uniqField}}&item.{{$uniqField}} != item.{{$uniqField}} {
 			return false
 		}
 	}
