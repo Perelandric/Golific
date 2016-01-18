@@ -126,6 +126,7 @@ func (self {{$repr.Name}}Enum) Description() string {
   return ""
 }
 
+// JSON marshaling methods
 {{if $repr.JsonMarshalIsString -}}
 func (self {{$repr.Name}}Enum) MarshalJSON() ([]byte, error) {
   return []byte(strconv.Quote(self.String())), nil
