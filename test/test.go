@@ -9,7 +9,7 @@ package test
 // Buz
 
 // @enum
-// --name=Oof
+// --name=Oof --unmarshaler=string
 // Bar --string="bar"
 // Baz --value = 123
 // Buz --description="Some description"

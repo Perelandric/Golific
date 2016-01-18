@@ -2,88 +2,124 @@ package generate_enum
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"go/parser"
 	"go/token"
 	"log"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"unicode"
 	"unicode/utf8"
 )
 
-func DoFile(file string) {
+const (
+	bitflags = 1 << iota
+	jsonMarshalIsString
+	jsonUnmarshalIsString
+	xmlMarshalIsString
+	xmlUnmarshalIsString
+)
+
+type EnumData struct {
+	Package string
+	File    string
+	Reprs   []*EnumRepr
+}
+
+type EnumRepr struct {
+	Name string
+
+	flags    uint
+	FlagSep  string
+	iterName string
+	Fields   []*FieldRepr
+}
+
+type FieldRepr struct {
+	Name        string
+	String      string
+	Description string
+	Value       int // Only used for custom values on non-bitflag enums
+}
+
+func (self *EnumData) DoFile(file string) error {
 	fset := token.NewFileSet()
 
 	f, err := parser.ParseFile(fset, file, nil, parser.ParseComments)
 	if err != nil {
-		log.Println(err)
-		return
+		return err
 	}
 
-	pckg := f.Name.Name
-	if len(pckg) == 0 {
-		log.Println("No package name")
-		return
+	self.Package = f.Name.Name
+	if len(self.Package) == 0 {
+		return fmt.Errorf("No package Name")
 	}
 
 	var dir, filename = filepath.Split(file)
 
-	osFile, err := os.Create(filepath.Join(dir, "enum____"+filename))
-	if err != nil {
-		log.Println(err)
-	}
-
-	var wg sync.WaitGroup
-	var mux sync.Mutex
-	var first = true
+	self.File = filepath.Join(dir, "enum____"+filename)
 
 	for _, cg := range f.Comments {
-		wg.Add(1)
-
-		go func(txt, pckg string) {
-			var buf bytes.Buffer
-
-			if generateCode(doComment(txt), &buf) {
-				mux.Lock()
-
-				if first {
-					first = false
-					osFile.WriteString(doOpen(pckg))
-				}
-				osFile.Write(buf.Bytes())
-
-				mux.Unlock()
-			}
-			wg.Done()
-		}(cg.Text(), pckg)
+		self.doComment(cg.Text())
 	}
 
-	wg.Wait()
-	osFile.Close()
+	if err := self.generateCode(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func checkValidity(res []*EnumRepr, flgs, flds, errs bool) []*EnumRepr {
+func (self *EnumRepr) JsonMarshalIsString() bool {
+	return self.flags&jsonMarshalIsString == jsonMarshalIsString
+}
+
+func (self *EnumRepr) JsonUnmarshalIsString() bool {
+	return self.flags&jsonUnmarshalIsString == jsonUnmarshalIsString
+}
+
+func (self *EnumRepr) GetIterName() string {
+	if len(self.iterName) == 0 {
+		return self.Name + "Values"
+	}
+	return self.iterName
+}
+
+func (repr *EnumRepr) GetIntType() string {
+	var bf = repr.flags&bitflags == bitflags
+	var ln = len(repr.Fields)
+	var u = ""
+	if bf {
+		u = "u"
+	}
+
+	switch {
+	case (bf && ln <= 8) || ln < 256:
+		return u + "int8"
+	case (bf && ln <= 16) || ln < 65536:
+		return u + "int16"
+	case (bf && ln <= 32) || ln < 4294967296:
+		return u + "int32"
+	}
+	return u + "int64"
+}
+
+func (self *EnumData) checkValidity(flgs, flds, errs bool) {
 	if !flgs || !flds || errs {
 		if errs {
 			log.Println("Enums with errors are excluded")
 		} else {
-			log.Println("Incomplete definition. Both flags and fields are required.")
+			log.Println("Incomplete definition. Both flags and Fields are required.")
 		}
-		if len(res) > 0 {
-			return res[0 : len(res)-1]
+		if len(self.Reprs) > 0 {
+			self.Reprs = self.Reprs[0 : len(self.Reprs)-1]
 		}
 	}
-	return res
 }
 
-func doComment(cgText string) []*EnumRepr {
+func (self *EnumData) doComment(cgText string) {
 	s := bufio.NewScanner(strings.NewReader(cgText))
-	res := make([]*EnumRepr, 0)
 
 	firstPass := true
 	doFlags, doFields, hasErrors := true, true, false
@@ -94,17 +130,17 @@ func doComment(cgText string) []*EnumRepr {
 
 		if strings.TrimSpace(line) == "@enum" {
 			firstPass = false
-			res = checkValidity(res, doFlags, doFields, hasErrors)
+			self.checkValidity(doFlags, doFields, hasErrors)
 
 			repr = &EnumRepr{
-				flag_sep: ",", // Go ahead and set the default even if not needed
+				FlagSep: ",", // Go ahead and set the default even if not needed
 			}
-			res = append(res, repr)
+			self.Reprs = append(self.Reprs, repr)
 
 			doFlags, doFields, hasErrors = false, false, false
 
 		} else if firstPass {
-			return nil // comment group didn't start with @enum
+			return // comment group didn't start with @enum
 
 		} else if hasErrors {
 			continue
@@ -135,13 +171,13 @@ func doComment(cgText string) []*EnumRepr {
 		}
 	}
 
-	return checkValidity(res, doFlags, doFields, hasErrors)
+	self.checkValidity(doFlags, doFields, hasErrors)
 }
 
 const unexpectedValue = "Unexpected value %q for %q\n"
 
 func (self *EnumRepr) setFlags(flags string) bool {
-	var name, value string
+	var Name, value string
 	var found, foundEqual bool
 
 	for len(flags) > 0 {
@@ -153,73 +189,73 @@ func (self *EnumRepr) setFlags(flags string) bool {
 			break
 		}
 
-		flags, name = getWord(flags)
+		flags, Name = getWord(flags)
 
-		switch strings.ToLower(name) {
+		switch strings.ToLower(Name) {
 
-		case "name": // Set the base name for the enum
-			if flags, value, foundEqual = getValue(name, flags); !foundEqual {
+		case "name": // Set the base Name for the enum
+			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
 				return false
 			}
 
-			if len(self.name) > 0 {
-				log.Printf("Name is already set: %q, but found: %q\n", self.name, value)
+			if len(self.Name) > 0 {
+				log.Printf("Name is already set: %q, but found: %q\n", self.Name, value)
 				return false
 			}
 
-			self.name = value
+			self.Name = value
 
 		case "bitflags": // The enum values are to be bitflags
 			self.flags |= bitflags
 
 		case "bitflag_separator": // The separator used when joining bitflags
-			if flags, self.flag_sep, foundEqual = getValue(name, flags); !foundEqual {
+			if flags, self.FlagSep, foundEqual = getValue(Name, flags); !foundEqual {
 				return false
 			}
 
-		case "iterator_name": // Custom name for Array of values
-			if flags, self.iter_name, foundEqual = getValue(name, flags); !foundEqual {
+		case "iterator_name": // Custom Name for Array of values
+			if flags, self.iterName, foundEqual = getValue(Name, flags); !foundEqual {
 				return false
 			}
 
 		case "marshaler": // Set type of JSON and XML marshalers
-			if flags, value, foundEqual = getValue(name, flags); !foundEqual {
+			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
 				return false
 			}
-			self.setMarshalingFlags(name, value, jsonMarshalIsString|xmlMarshalIsString)
+			self.setMarshalingFlags(Name, value, jsonMarshalIsString|xmlMarshalIsString)
 
 		case "unmarshaler": // Set type of JSON and XML unmarshalers
-			if flags, value, foundEqual = getValue(name, flags); !foundEqual {
+			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
 				return false
 			}
-			self.setMarshalingFlags(name, value, jsonUnmarshalIsString|xmlUnmarshalIsString)
+			self.setMarshalingFlags(Name, value, jsonUnmarshalIsString|xmlUnmarshalIsString)
 
 		case "json_marshaler": // Set type of JSON marshaler
-			if flags, value, foundEqual = getValue(name, flags); !foundEqual {
+			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
 				return false
 			}
-			self.setMarshalingFlags(name, value, jsonMarshalIsString)
+			self.setMarshalingFlags(Name, value, jsonMarshalIsString)
 
 		case "json_unmarshaler": // Set type of JSON unmarshaler
-			if flags, value, foundEqual = getValue(name, flags); !foundEqual {
+			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
 				return false
 			}
-			self.setMarshalingFlags(name, value, jsonUnmarshalIsString)
+			self.setMarshalingFlags(Name, value, jsonUnmarshalIsString)
 
 		case "xml_marshaler": // Set type of XML marshaler
-			if flags, value, foundEqual = getValue(name, flags); !foundEqual {
+			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
 				return false
 			}
-			self.setMarshalingFlags(name, value, xmlMarshalIsString)
+			self.setMarshalingFlags(Name, value, xmlMarshalIsString)
 
 		case "xml_unmarshaler": // Set type of XML unmarshaler
-			if flags, value, foundEqual = getValue(name, flags); !foundEqual {
+			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
 				return false
 			}
-			self.setMarshalingFlags(name, value, xmlUnmarshalIsString)
+			self.setMarshalingFlags(Name, value, xmlUnmarshalIsString)
 
 		default:
-			log.Printf("Unknown flag %q\n", name)
+			log.Printf("Unknown flag %q\n", Name)
 		}
 	}
 	return true
@@ -233,11 +269,11 @@ func (self *EnumRepr) setField(field string) bool {
 	field, f.Name = getWord(strings.TrimSpace(field))
 
 	if len(f.Name) == 0 {
-		log.Println("Field name is empty")
+		log.Println("Field Name is empty")
 		return false
 	}
 
-	var name string
+	var Name string
 	var foundEqual, found bool
 
 	for len(field) > 0 {
@@ -248,24 +284,24 @@ func (self *EnumRepr) setField(field string) bool {
 			break
 		}
 
-		field, name = getWord(field)
+		field, Name = getWord(field)
 
-		switch strings.ToLower(name) {
+		switch strings.ToLower(Name) {
 
 		case "string": // The string representation of the field
-			if field, f.String, foundEqual = getValue(name, field); !foundEqual {
+			if field, f.String, foundEqual = getValue(Name, field); !foundEqual {
 				return false
 			}
 
 		case "description": // The description of the field
-			if field, f.Description, foundEqual = getValue(name, field); !foundEqual {
+			if field, f.Description, foundEqual = getValue(Name, field); !foundEqual {
 				return false
 			}
 
 		case "value": // Custom value for the field
 			var v string
 
-			if field, v, foundEqual = getValue(name, field); !foundEqual {
+			if field, v, foundEqual = getValue(Name, field); !foundEqual {
 				return false
 			}
 			if n, err := strconv.ParseUint(v, 10, 32); err != nil {
@@ -275,7 +311,7 @@ func (self *EnumRepr) setField(field string) bool {
 				f.Value = int(n)
 			}
 		default:
-			log.Printf("Unknown flag %q\n", name)
+			log.Printf("Unknown flag %q\n", Name)
 		}
 	}
 
@@ -293,27 +329,31 @@ func (self *EnumRepr) setField(field string) bool {
 
 	if f.Value == -1 {
 		if self.flags&bitflags == bitflags {
-			f.Value = 1 << uint(len(self.fields))
+			f.Value = 1 << uint(len(self.Fields))
 		} else {
 			// TODO: Make sure there are no Custom number conflicts
-			f.Value = len(self.fields) + 1
+			f.Value = len(self.Fields) + 1
 		}
 	}
 
-	self.fields = append(self.fields, &f)
+	self.Fields = append(self.Fields, &f)
 
 	return true
 }
 
-func (self *EnumRepr) setMarshalingFlags(name, value string, flags uint) {
+func (self *EnumRepr) setMarshalingFlags(Name, value string, flags uint) {
 	switch strings.ToLower(value) {
 	case "string":
 		self.flags |= flags
 	case "value":
 		self.flags &^= flags
 	default:
-		log.Printf(unexpectedValue, value, name)
+		log.Printf(unexpectedValue, value, Name)
 	}
+}
+
+func (self *EnumRepr) IsBitflag() bool {
+	return self.flags&bitflags == bitflags
 }
 
 func trashUntil(source, search string, exclude bool) (string, bool) {
@@ -345,14 +385,14 @@ func getWord(source string) (_ string, word string) {
 	return source[i:], word
 }
 
-func getValue(name, source string) (_, value string, foundEqual bool) {
+func getValue(Name, source string) (_, value string, foundEqual bool) {
 	if len(source) == 0 {
 		return "", "", false
 	}
 
 	source, foundEqual = trashUntil(strings.TrimSpace(source), "=", true)
 	if !foundEqual {
-		log.Printf(`Expected "=" after %q.\n`, name)
+		log.Printf(`Expected "=" after %q.\n`, Name)
 		return source, "", foundEqual
 	}
 
@@ -394,28 +434,4 @@ func skipEmptyLines(s *bufio.Scanner) string {
 		return t
 	}
 	return ""
-}
-
-const (
-	bitflags = 1 << iota
-	jsonMarshalIsString
-	jsonUnmarshalIsString
-	xmlMarshalIsString
-	xmlUnmarshalIsString
-)
-
-type EnumRepr struct {
-	name string
-
-	flags     uint
-	flag_sep  string
-	iter_name string
-	fields    []*FieldRepr
-}
-
-type FieldRepr struct {
-	Name        string
-	String      string
-	Description string
-	Value       int // Only used for custom values on non-bitflag enums
 }

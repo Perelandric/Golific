@@ -2,252 +2,140 @@ package generate_enum
 
 import (
 	"bytes"
-	"fmt"
-	"strconv"
-	"strings"
+	"go/format"
+	"os"
+	"text/template"
 )
 
-func generateCode(reprs []*EnumRepr, buf *bytes.Buffer) bool {
-	if len(reprs) == 0 {
-		return false
+func (self *EnumData) generateCode() error {
+	if len(self.Reprs) == 0 {
+		return nil
 	}
 
-	for _, repr := range reprs {
-		// Make sure defaults are set
-		if repr.iter_name == "" {
-			repr.iter_name = repr.name + "Values"
-		}
+	// Execute the template on the data gathered
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, self); err != nil {
+		return err
+	}
 
-		var intType = getIntType(repr)
+	// Run the go code formatter to make sure syntax is correct before writing.
+	b, err := format.Source(buf.Bytes())
+	if err != nil {
+		return err
+	}
 
-		doHeaderComment(buf, repr)
-		doStructs(buf, repr, intType)
-		doIterator(buf, repr)
-		doValueFuncs(buf, repr, intType)
-		doStringFunc(buf, repr)
-		doDescFunc(buf, repr)
-		doMarshalJSON(buf, repr)
-		doUnmarshalJSON(buf, repr, intType)
+	file, err := os.Create(self.File)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
 
+	_, err = file.Write(b)
+	return err
+}
+
+// If any EnumRepr is `bitflag`, `log` is needed
+func (self *EnumData) NeedsLog() bool {
+	for _, repr := range self.Reprs {
 		if repr.flags&bitflags == bitflags {
-			doBitFuncs(buf, repr)
+			return true
 		}
 	}
-	return true
+	return false
 }
 
-func getIntType(repr *EnumRepr) string {
-	var bf = repr.flags&bitflags == bitflags
-	var ln = len(repr.fields)
-	var u = ""
-	if bf {
-		u = "u"
-	}
+var tmpl = template.Must(template.New("generate_enum").Parse(`
+package {{.Package}}
 
-	switch {
-	case (bf && ln <= 8) || ln < 256:
-		return u + "int8"
-	case (bf && ln <= 16) || ln < 65536:
-		return u + "int16"
-	case (bf && ln <= 32) || ln < 4294967296:
-		return u + "int32"
-	}
-	return u + "int64"
-}
+import (
+	"strconv"
+	"strings"
+	{{if .NeedsLog}}"log"{{end}}
+)
+{{range $repr := .Reprs}}
+{{$intType := .GetIntType}}
 
-func doOpen(pckg string) string {
-	var imps = []string{"strconv", "strings"}
-
-	for i := range imps {
-		imps[i] = strconv.Quote(imps[i])
-	}
-
-	return fmt.Sprintf(
-		"package %s\n\nimport (\n  %s\n)\n", pckg, strings.Join(imps, "\n  "))
-}
-
-func doHeaderComment(buf *bytes.Buffer, repr *EnumRepr) {
-	var typ string
-	if repr.flags&bitflags == bitflags {
-		typ = " - bit flags"
-	}
-	fmt.Fprintf(buf, `
 /*****************************
 
-	%sEnum%s
+{{$repr.Name}}Enum{{if .IsBitflag}} - bit flags{{end}}
 
 ******************************/
-`, repr.name, typ)
+
+type {{$repr.Name}}Enum struct{ value {{$intType}} }
+
+var {{$repr.Name}} = struct {
+	{{range $f := .Fields}}
+	{{$f.Name}} {{$repr.Name}}Enum
+	{{end}}
+}{
+	{{range $f := .Fields}}
+	{{$f.Name}}: {{$repr.Name}}Enum{ value: {{$f.Value}} },
+	{{end}}
 }
 
-func doStructs(buf *bytes.Buffer, repr *EnumRepr, intType string) {
-	fmt.Fprintf(buf, `
-type %sEnum struct{ value %s }
-
-var %s = struct {
-%s}{
-%s}
-`, repr.name, intType, repr.name, getFieldDef(repr), getFieldInit(repr))
+// Used to iterate in range loops
+var {{.GetIterName}} = [...]{{$repr.Name}}Enum{
+	{{range $f := .Fields}} {{$repr.Name}}.{{$f.Name}},{{end}}
 }
 
-func getFieldDef(repr *EnumRepr) []byte {
-	var buf bytes.Buffer
-	for _, f := range repr.fields {
-		fmt.Fprintf(&buf, "  %s %sEnum\n", f.Name, repr.name)
-	}
-	return buf.Bytes()
-}
-
-func getFieldInit(repr *EnumRepr) []byte {
-	var buf bytes.Buffer
-	for i, f := range repr.fields {
-		if repr.flags&bitflags == bitflags {
-			i = 1 << uint(i)
-		}
-
-		fmt.Fprintf(&buf, "  %s: %sEnum{%d},\n", f.Name, repr.name, i)
-	}
-	return buf.Bytes()
-}
-
-func doIterator(buf *bytes.Buffer, repr *EnumRepr) {
-	var b bytes.Buffer
-	for _, f := range repr.fields {
-		fmt.Fprintf(&b, "%s.%s, ", repr.name, f.Name)
-	}
-
-	fmt.Fprintf(buf, "\nvar %s = [...]%sEnum{%s}\n",
-		repr.iter_name, repr.name, b.String())
-}
-
-func doValueFuncs(buf *bytes.Buffer, repr *EnumRepr, intType string) {
-	fmt.Fprintf(buf, `
-func (self %sEnum) Value() %s {
+// Get the integer value of the enum variant
+func (self {{$repr.Name}}Enum) Value() {{$intType}} {
 	return self.value
 }
-func (self %sEnum) IntValue() int {
+func (self {{$repr.Name}}Enum) IntValue() int {
 	return int(self.value)
 }
-`, repr.name, intType, repr.name)
-}
 
-func doStringFunc(buf *bytes.Buffer, repr *EnumRepr) {
-	var b bytes.Buffer
-	var bf = repr.flags&bitflags == bitflags
+// Get the string representation of the enum variant
+func (self {{$repr.Name}}Enum) String() string {
+	switch self.value {
+{{range $f := .Fields}}
+	case {{$f.Value}}:
+		return "{{$f.String}}"
+{{end}}
+  }
 
-	var ret string
-
-	for _, f := range repr.fields {
-		if bf {
-			ret = fmt.Sprintf(`
+{{if .IsBitflag}}
 	if self.value == 0 {
 		return ""
 	}
 
-  var vals = make([]string, 0, %d)
+	var vals = make([]string, 0, {{len .Fields}}/2)
 
-  for _, item := range %s {
-    if self.value & item.value == item.value {
-      vals = append(vals, item.String())
-    }
-  }
-  return strings.Join(vals, %q)`,
-				f.Value/2, repr.iter_name, repr.flag_sep)
-
-		} else {
-			ret = `	return ""`
+	for _, item := range {{.GetIterName}} {
+		if self.value & item.value == item.value {
+			vals = append(vals, item.String())
 		}
-
-		fmt.Fprintf(&b, `
-  case %d:
-    return %q`, f.Value, f.String)
 	}
-
-	fmt.Fprintf(buf, `
-func (self %sEnum) String() string {
-	switch self.value {%s
-  }
-%s
-}
-`, repr.name, b.Bytes(), ret)
+	return strings.Join(vals, "{{.FlagSep}}")
+{{else}}
+	return ""
+{{end}}
 }
 
-func doDescFunc(buf *bytes.Buffer, repr *EnumRepr) {
-	var b bytes.Buffer
-
-	for _, f := range repr.fields {
-		fmt.Fprintf(&b, `
-  case %d:
-    return %q`, f.Value, f.Description)
-	}
-
-	fmt.Fprintf(buf, `
-func (self %sEnum) Description() string {
-  switch self.value {%s
+// Get the string description of the enum variant
+func (self {{$repr.Name}}Enum) Description() string {
+  switch self.value {
+	{{range $f := .Fields}}
+	case {{$f.Value}}:
+		return "{{$f.Description}}"
+	{{end}}
   }
   return ""
 }
-`, repr.name, b.Bytes())
-}
 
-func doMarshalJSON(buf *bytes.Buffer, repr *EnumRepr) {
-	if repr.flags&jsonMarshalIsString == jsonMarshalIsString {
-		fmt.Fprintf(buf, `
-func (self %sEnum) MarshalJSON() ([]byte, error) {
+{{if $repr.JsonMarshalIsString}}
+func (self {{$repr.Name}}Enum) MarshalJSON() ([]byte, error) {
   return []byte(strconv.Quote(self.String())), nil
 }
-`, repr.name)
-
-	} else {
-		fmt.Fprintf(buf, `
-func (self %sEnum) MarshalJSON() ([]byte, error) {
+{{else}}
+func (self {{$repr.Name}}Enum) MarshalJSON() ([]byte, error) {
   return []byte(strconv.Itoa(self.IntValue())), nil
 }
-`, repr.name)
+{{end}}
 
-	}
-}
-
-func doUnmarshalJSON(buf *bytes.Buffer, repr *EnumRepr, intType string) {
-	var b bytes.Buffer
-	var bf = repr.flags&bitflags == bitflags
-
-	for _, f := range repr.fields {
-		fmt.Fprintf(&b, `
-  case %q:
-  	self.value = %d
-  	return nil`, f.String, f.Value)
-	}
-
-	var bb bytes.Buffer
-
-	if bf {
-		fmt.Fprintf(&bb, `
-    var val = 0
-
-    for _, part := range strings.Split(string(b), %q) {
-      switch part {`, repr.flag_sep)
-
-		for _, f := range repr.fields {
-			fmt.Fprintf(&bb, `
-      case %q:
-        val &= %d`, f.String, f.Value)
-		}
-
-		fmt.Fprintf(&bb, `
-    //  default:
-        // log.Printf("Unexpected value: %%q while unmarshaling %sEnum\n", part)
-      }
-    }
-
-    self.value = %s(val)
-    return nil
-  `, repr.name, intType)
-	}
-
-	if repr.flags&jsonUnmarshalIsString == jsonUnmarshalIsString {
-		fmt.Fprintf(buf, `
-func (self *%sEnum) UnmarshalJSON(b []byte) error {
+{{if $repr.JsonUnmarshalIsString}}
+func (self *{{$repr.Name}}Enum) UnmarshalJSON(b []byte) error {
 	var s, err = strconv.Unquote(string(b))
 	if err != nil {
 		return err
@@ -257,61 +145,78 @@ func (self *%sEnum) UnmarshalJSON(b []byte) error {
 		return nil
 	}
 
-	switch s {%s
+	switch s {
+	{{range $f := .Fields}}
+	case "{{$f.String}}":
+		self.value = {{$f.Value}}
+		return nil
+	{{end}}
+	{{if not .IsBitflag}}
+	default:
+		log.Printf("Unexpected value: %q while unmarshaling {{$repr.Name}}Enum\n", s)
+	{{end}}
 	}
 
-  if %t {
-%s  }
+{{if .IsBitflag}}
+	var val = 0
 
-	return nil // fmt.Errorf("Invalid enum string value: %%s\n", b)
+	for _, part := range strings.Split(string(b), "{{.FlagSep}}") {
+		switch part {
+		{{range $f := .Fields}}
+		case "{{$f.String}}":
+			val |= {{$f.Value}}
+		{{end}}
+  	default:
+			log.Printf("Unexpected value: %q while unmarshaling {{$repr.Name}}Enum\n", part)
+		}
+	}
+
+	self.value = {{$intType}}(val)
+{{end}}
+
+	return nil
 }
-`, repr.name, b.String(), bf, bb.String())
-
-	} else {
-		fmt.Fprintf(buf, `
-func (self *%sEnum) UnmarshalJSON(b []byte) error {
+{{else}}
+func (self *{{$repr.Name}}Enum) UnmarshalJSON(b []byte) error {
 	var n, err = strconv.ParseUint(string(b), 10, 64)
 	if err != nil {
 		return err
 	}
-	self.value = %s(n)
+	self.value = {{$intType}}(n)
 	return nil
 }
-`, repr.name, intType)
-	}
-}
+{{end}}
 
-func doBitFuncs(buf *bytes.Buffer, repr *EnumRepr) {
-	fmt.Fprintf(buf, `
-func (self %sEnum) Add(v %sEnum) %sEnum {
+{{if .IsBitflag}}
+func (self {{$repr.Name}}Enum) Add(v {{$repr.Name}}Enum) {{$repr.Name}}Enum {
 	self.value |= v.value
 	return self
 }
 
-func (self %sEnum) AddAll(v ...%sEnum) %sEnum {
+func (self {{$repr.Name}}Enum) AddAll(v ...{{$repr.Name}}Enum) {{$repr.Name}}Enum {
 	for _, item := range v {
 		self.value |= item.value
 	}
 	return self
 }
 
-func (self %sEnum) Remove(v %sEnum) %sEnum {
+func (self {{$repr.Name}}Enum) Remove(v {{$repr.Name}}Enum) {{$repr.Name}}Enum {
 	self.value &^= v.value
 	return self
 }
 
-func (self %sEnum) RemoveAll(v ...%sEnum) %sEnum {
+func (self {{$repr.Name}}Enum) RemoveAll(v ...{{$repr.Name}}Enum) {{$repr.Name}}Enum {
 	for _, item := range v {
 		self.value &^= item.value
 	}
 	return self
 }
 
-func (self %sEnum) Has(v %sEnum) bool {
+func (self {{$repr.Name}}Enum) Has(v {{$repr.Name}}Enum) bool {
 	return self.value&v.value == v.value
 }
 
-func (self %sEnum) HasAny(v ...%sEnum) bool {
+func (self {{$repr.Name}}Enum) HasAny(v ...{{$repr.Name}}Enum) bool {
 	for _, item := range v {
 		if self.value&item.value == item.value {
 			return true
@@ -320,7 +225,7 @@ func (self %sEnum) HasAny(v ...%sEnum) bool {
 	return false
 }
 
-func (self %sEnum) HasAll(v ...%sEnum) bool {
+func (self {{$repr.Name}}Enum) HasAll(v ...{{$repr.Name}}Enum) bool {
 	for _, item := range v {
 		if self.value&item.value != item.value {
 			return false
@@ -328,11 +233,6 @@ func (self %sEnum) HasAll(v ...%sEnum) bool {
 	}
 	return true
 }
-`, repr.name, repr.name, repr.name,
-		repr.name, repr.name, repr.name,
-		repr.name, repr.name, repr.name,
-		repr.name, repr.name, repr.name,
-		repr.name, repr.name,
-		repr.name, repr.name,
-		repr.name, repr.name)
-}
+{{end}}
+{{end}}
+`))

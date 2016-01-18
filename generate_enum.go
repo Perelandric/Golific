@@ -11,8 +11,10 @@ func main() {
 	log.SetFlags(0)
 	log.SetPrefix("enum: ")
 
+	var data generate_enum.EnumData
+
 	for _, file := range os.Args[1:] {
 		fmt.Printf("Processing file: %q\n", file)
-		generate_enum.DoFile(file)
+		data.DoFile(file)
 	}
 }

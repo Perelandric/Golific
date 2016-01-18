@@ -1,30 +1,40 @@
 package test
 
 import (
-  "strconv"
-  "strings"
+	"log"
+	"strconv"
+	"strings"
 )
 
 /*****************************
 
-	FooEnum - bit flags
+FooEnum - bit flags
 
 ******************************/
 
 type FooEnum struct{ value uint8 }
 
 var Foo = struct {
-  Bar FooEnum
-  Baz FooEnum
-  Buz FooEnum
+	Bar FooEnum
+
+	Baz FooEnum
+
+	Buz FooEnum
 }{
-  Bar: FooEnum{1},
-  Baz: FooEnum{2},
-  Buz: FooEnum{4},
+
+	Bar: FooEnum{value: 1},
+
+	Baz: FooEnum{value: 2},
+
+	Buz: FooEnum{value: 4},
 }
 
-var foobar = [...]FooEnum{Foo.Bar, Foo.Baz, Foo.Buz, }
+// Used to iterate in range loops
+var foobar = [...]FooEnum{
+	Foo.Bar, Foo.Baz, Foo.Buz,
+}
 
+// Get the integer value of the enum variant
 func (self FooEnum) Value() uint8 {
 	return self.value
 }
@@ -32,44 +42,55 @@ func (self FooEnum) IntValue() int {
 	return int(self.value)
 }
 
+// Get the string representation of the enum variant
 func (self FooEnum) String() string {
 	switch self.value {
-  case 1:
-    return "bar"
-  case 2:
-    return "baz"
-  case 4:
-    return "Buz"
-  }
+
+	case 1:
+		return "bar"
+
+	case 2:
+		return "baz"
+
+	case 4:
+		return "Buz"
+
+	}
 
 	if self.value == 0 {
 		return ""
 	}
 
-  var vals = make([]string, 0, 2)
+	var vals = make([]string, 0, 3/2)
 
-  for _, item := range foobar {
-    if self.value & item.value == item.value {
-      vals = append(vals, item.String())
-    }
-  }
-  return strings.Join(vals, ",")
+	for _, item := range foobar {
+		if self.value&item.value == item.value {
+			vals = append(vals, item.String())
+		}
+	}
+	return strings.Join(vals, ",")
+
 }
 
+// Get the string description of the enum variant
 func (self FooEnum) Description() string {
-  switch self.value {
-  case 1:
-    return "bar"
-  case 2:
-    return "This is the description"
-  case 4:
-    return "Buz"
-  }
-  return ""
+	switch self.value {
+
+	case 1:
+		return "bar"
+
+	case 2:
+		return "This is the description"
+
+	case 4:
+		return "Buz"
+
+	}
+	return ""
 }
 
 func (self FooEnum) MarshalJSON() ([]byte, error) {
-  return []byte(strconv.Quote(self.String())), nil
+	return []byte(strconv.Quote(self.String())), nil
 }
 
 func (self *FooEnum) UnmarshalJSON(b []byte) error {
@@ -83,39 +104,43 @@ func (self *FooEnum) UnmarshalJSON(b []byte) error {
 	}
 
 	switch s {
-  case "bar":
-  	self.value = 1
-  	return nil
-  case "baz":
-  	self.value = 2
-  	return nil
-  case "Buz":
-  	self.value = 4
-  	return nil
+
+	case "bar":
+		self.value = 1
+		return nil
+
+	case "baz":
+		self.value = 2
+		return nil
+
+	case "Buz":
+		self.value = 4
+		return nil
+
 	}
 
-  if true {
+	var val = 0
 
-    var val = 0
+	for _, part := range strings.Split(string(b), ",") {
+		switch part {
 
-    for _, part := range strings.Split(string(b), ",") {
-      switch part {
-      case "bar":
-        val &= 1
-      case "baz":
-        val &= 2
-      case "Buz":
-        val &= 4
-    //  default:
-        // log.Printf("Unexpected value: %q while unmarshaling FooEnum\n", part)
-      }
-    }
+		case "bar":
+			val |= 1
 
-    self.value = uint8(val)
-    return nil
-    }
+		case "baz":
+			val |= 2
 
-	return nil // fmt.Errorf("Invalid enum string value: %s\n", b)
+		case "Buz":
+			val |= 4
+
+		default:
+			log.Printf("Unexpected value: %q while unmarshaling FooEnum\n", part)
+		}
+	}
+
+	self.value = uint8(val)
+
+	return nil
 }
 
 func (self FooEnum) Add(v FooEnum) FooEnum {
@@ -166,24 +191,33 @@ func (self FooEnum) HasAll(v ...FooEnum) bool {
 
 /*****************************
 
-	OofEnum
+OofEnum
 
 ******************************/
 
 type OofEnum struct{ value int8 }
 
 var Oof = struct {
-  Bar OofEnum
-  Baz OofEnum
-  Buz OofEnum
+	Bar OofEnum
+
+	Baz OofEnum
+
+	Buz OofEnum
 }{
-  Bar: OofEnum{0},
-  Baz: OofEnum{1},
-  Buz: OofEnum{2},
+
+	Bar: OofEnum{value: 1},
+
+	Baz: OofEnum{value: 123},
+
+	Buz: OofEnum{value: 3},
 }
 
-var OofValues = [...]OofEnum{Oof.Bar, Oof.Baz, Oof.Buz, }
+// Used to iterate in range loops
+var OofValues = [...]OofEnum{
+	Oof.Bar, Oof.Baz, Oof.Buz,
+}
 
+// Get the integer value of the enum variant
 func (self OofEnum) Value() int8 {
 	return self.value
 }
@@ -191,39 +225,74 @@ func (self OofEnum) IntValue() int {
 	return int(self.value)
 }
 
+// Get the string representation of the enum variant
 func (self OofEnum) String() string {
 	switch self.value {
-  case 1:
-    return "bar"
-  case 123:
-    return "Baz"
-  case 3:
-    return "Buz"
-  }
+
+	case 1:
+		return "bar"
+
+	case 123:
+		return "Baz"
+
+	case 3:
+		return "Buz"
+
+	}
+
+	return ""
+
+}
+
+// Get the string description of the enum variant
+func (self OofEnum) Description() string {
+	switch self.value {
+
+	case 1:
+		return "bar"
+
+	case 123:
+		return "Baz"
+
+	case 3:
+		return "Some description"
+
+	}
 	return ""
 }
 
-func (self OofEnum) Description() string {
-  switch self.value {
-  case 1:
-    return "bar"
-  case 123:
-    return "Baz"
-  case 3:
-    return "Some description"
-  }
-  return ""
-}
-
 func (self OofEnum) MarshalJSON() ([]byte, error) {
-  return []byte(strconv.Itoa(self.IntValue())), nil
+	return []byte(strconv.Itoa(self.IntValue())), nil
 }
 
 func (self *OofEnum) UnmarshalJSON(b []byte) error {
-	var n, err = strconv.ParseUint(string(b), 10, 64)
+	var s, err = strconv.Unquote(string(b))
 	if err != nil {
 		return err
 	}
-	self.value = int8(n)
+
+	if len(s) == 0 {
+		return nil
+	}
+
+	switch s {
+
+	case "bar":
+		self.value = 1
+		return nil
+
+	case "Baz":
+		self.value = 123
+		return nil
+
+	case "Buz":
+		self.value = 3
+		return nil
+
+	default:
+		log.Printf("Unexpected value: %q while unmarshaling OofEnum\n", s)
+
+	}
+
 	return nil
 }
