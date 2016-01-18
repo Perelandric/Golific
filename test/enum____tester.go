@@ -232,28 +232,10 @@ func (self OofEnum) MarshalJSON() ([]byte, error) {
 }
 
 func (self *OofEnum) UnmarshalJSON(b []byte) error {
-	var s, err = strconv.Unquote(string(b))
+	var n, err = strconv.ParseUint(string(b), 10, 64)
 	if err != nil {
 		return err
 	}
-
-	if len(s) == 0 {
-		return nil
-	}
-
-	switch s {
-	case "bar":
-		self.value = 1
-		return nil
-	case "Baz":
-		self.value = 123
-		return nil
-	case "Buz":
-		self.value = 3
-		return nil
-	default:
-		log.Printf("Unexpected value: %q while unmarshaling OofEnum\n", s)
-	}
-
+	self.value = int8(n)
 	return nil
 }
