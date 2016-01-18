@@ -35,7 +35,7 @@ func (self *EnumData) generateCode() error {
 }
 
 // If any EnumRepr is `bitflag`, `log` is needed
-func (self *EnumData) NeedsLog() bool {
+func (self *EnumData) AnyBitflags() bool {
 	for _, repr := range self.Reprs {
 		if repr.flags&bitflags == bitflags {
 			return true
@@ -48,9 +48,9 @@ var tmpl = template.Must(template.New("generate_enum").Parse(
 	`package {{.Package}}
 
 import (
+	"log"
 	"strconv"
-	"strings"
-	{{if .NeedsLog}}"log"{{end}}
+	{{if .AnyBitflags}}"strings"{{end -}}
 )
 {{- range $repr := .Reprs}}
 {{- $intType := .GetIntType}}
