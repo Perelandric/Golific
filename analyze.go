@@ -40,7 +40,7 @@ type FieldRepr struct {
 	Name        string
 	String      string
 	Description string
-	Value       int // Only used for custom values on non-bitflag enums
+	Value       int64
 }
 
 func (self *EnumData) DoFile(file string) error {
@@ -89,20 +89,16 @@ func (self *EnumRepr) GetIterName() string {
 func (repr *EnumRepr) GetIntType() string {
 	var bf = repr.flags&bitflags == bitflags
 	var ln = int64(len(repr.Fields))
-	var u = ""
-	if bf {
-		u = "u"
-	}
 
 	switch {
 	case (bf && ln <= 8) || ln < 256:
-		return u + "int8"
+		return "uint8"
 	case (bf && ln <= 16) || ln < 65536:
-		return u + "int16"
+		return "uint16"
 	case (bf && ln <= 32) || ln < 4294967296:
-		return u + "int32"
+		return "uint32"
 	}
-	return u + "int64"
+	return "uint64"
 }
 
 func (self *EnumData) checkValidity(flgs, flds, errs bool) {
@@ -308,7 +304,7 @@ func (self *EnumRepr) setField(field string) bool {
 				log.Printf("%q is not a valid uint\n", v)
 				return false
 			} else {
-				f.Value = int(n)
+				f.Value = int64(n)
 			}
 		default:
 			log.Printf("Unknown flag %q\n", Name)
@@ -332,7 +328,7 @@ func (self *EnumRepr) setField(field string) bool {
 			f.Value = 1 << uint(len(self.Fields))
 		} else {
 			// TODO: Make sure there are no Custom number conflicts
-			f.Value = len(self.Fields) + 1
+			f.Value = int64(len(self.Fields) + 1)
 		}
 	}
 
