@@ -189,7 +189,7 @@ func (self *EnumRepr) setFlags(flags string) bool {
 			break
 		}
 
-		flags, Name = getWord(flags)
+		flags, Name = getIdent(flags)
 
 		switch strings.ToLower(Name) {
 
@@ -266,7 +266,7 @@ func (self *EnumRepr) setField(field string) bool {
 		Value: -1,
 	}
 
-	field, f.Name = getWord(strings.TrimSpace(field))
+	field, f.Name = getIdent(strings.TrimSpace(field))
 
 	if len(f.Name) == 0 {
 		log.Println("Field Name is empty")
@@ -284,7 +284,7 @@ func (self *EnumRepr) setField(field string) bool {
 			break
 		}
 
-		field, Name = getWord(field)
+		field, Name = getIdent(field)
 
 		switch strings.ToLower(Name) {
 
@@ -372,10 +372,11 @@ func trashUntil(source, search string, exclude bool) (string, bool) {
 	return source[idx:], true
 }
 
-func getWord(source string) (_ string, word string) {
+func getIdent(source string) (_ string, word string) {
 	var i = 0
-	for _, c := range source {
-		if ('a' <= c && c <= 'z') || c == '_' || ('A' <= c && c <= 'Z') {
+	for j, c := range source {
+		if ('a' <= c && c <= 'z') || c == '_' || ('A' <= c && c <= 'Z') ||
+			(j > 0 && '0' <= c && c <= '9') {
 			word += string(c)
 			i += utf8.RuneLen(c)
 		} else {
