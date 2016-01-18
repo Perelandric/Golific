@@ -1,4 +1,4 @@
-package generate_enum
+package main
 
 import (
 	"bufio"
@@ -88,7 +88,7 @@ func (self *EnumRepr) GetIterName() string {
 
 func (repr *EnumRepr) GetIntType() string {
 	var bf = repr.flags&bitflags == bitflags
-	var ln = len(repr.Fields)
+	var ln = int64(len(repr.Fields))
 	var u = ""
 	if bf {
 		u = "u"

@@ -1,4 +1,4 @@
-package generate_enum
+package main
 
 import (
 	"bytes"
@@ -44,16 +44,16 @@ func (self *EnumData) NeedsLog() bool {
 	return false
 }
 
-var tmpl = template.Must(template.New("generate_enum").Parse(`
-package {{.Package}}
+var tmpl = template.Must(template.New("generate_enum").Parse(
+	`package {{.Package}}
 
 import (
 	"strconv"
 	"strings"
 	{{if .NeedsLog}}"log"{{end}}
 )
-{{range $repr := .Reprs}}
-{{$intType := .GetIntType}}
+{{- range $repr := .Reprs}}
+{{- $intType := .GetIntType}}
 
 /*****************************
 
@@ -64,13 +64,13 @@ import (
 type {{$repr.Name}}Enum struct{ value {{$intType}} }
 
 var {{$repr.Name}} = struct {
-	{{range $f := .Fields}}
+	{{- range $f := .Fields}}
 	{{$f.Name}} {{$repr.Name}}Enum
-	{{end}}
+	{{- end}}
 }{
-	{{range $f := .Fields}}
+	{{- range $f := .Fields}}
 	{{$f.Name}}: {{$repr.Name}}Enum{ value: {{$f.Value}} },
-	{{end}}
+	{{- end}}
 }
 
 // Used to iterate in range loops
@@ -82,6 +82,7 @@ var {{.GetIterName}} = [...]{{$repr.Name}}Enum{
 func (self {{$repr.Name}}Enum) Value() {{$intType}} {
 	return self.value
 }
+
 func (self {{$repr.Name}}Enum) IntValue() int {
 	return int(self.value)
 }
@@ -89,13 +90,13 @@ func (self {{$repr.Name}}Enum) IntValue() int {
 // Get the string representation of the enum variant
 func (self {{$repr.Name}}Enum) String() string {
 	switch self.value {
-{{range $f := .Fields}}
+	{{range $f := .Fields -}}
 	case {{$f.Value}}:
 		return "{{$f.String}}"
-{{end}}
+	{{end -}}
   }
 
-{{if .IsBitflag}}
+	{{if .IsBitflag -}}
 	if self.value == 0 {
 		return ""
 	}
@@ -108,33 +109,33 @@ func (self {{$repr.Name}}Enum) String() string {
 		}
 	}
 	return strings.Join(vals, "{{.FlagSep}}")
-{{else}}
+	{{else -}}
 	return ""
-{{end}}
+	{{end -}}
 }
 
 // Get the string description of the enum variant
 func (self {{$repr.Name}}Enum) Description() string {
   switch self.value {
-	{{range $f := .Fields}}
+	{{range $f := .Fields -}}
 	case {{$f.Value}}:
 		return "{{$f.Description}}"
-	{{end}}
+	{{end -}}
   }
   return ""
 }
 
-{{if $repr.JsonMarshalIsString}}
+{{if $repr.JsonMarshalIsString -}}
 func (self {{$repr.Name}}Enum) MarshalJSON() ([]byte, error) {
   return []byte(strconv.Quote(self.String())), nil
 }
-{{else}}
+{{- else -}}
 func (self {{$repr.Name}}Enum) MarshalJSON() ([]byte, error) {
   return []byte(strconv.Itoa(self.IntValue())), nil
 }
-{{end}}
+{{- end}}
 
-{{if $repr.JsonUnmarshalIsString}}
+{{if $repr.JsonUnmarshalIsString -}}
 func (self *{{$repr.Name}}Enum) UnmarshalJSON(b []byte) error {
 	var s, err = strconv.Unquote(string(b))
 	if err != nil {
@@ -146,37 +147,37 @@ func (self *{{$repr.Name}}Enum) UnmarshalJSON(b []byte) error {
 	}
 
 	switch s {
-	{{range $f := .Fields}}
+	{{range $f := .Fields -}}
 	case "{{$f.String}}":
 		self.value = {{$f.Value}}
 		return nil
-	{{end}}
-	{{if not .IsBitflag}}
+	{{end -}}
+	{{if not .IsBitflag -}}
 	default:
 		log.Printf("Unexpected value: %q while unmarshaling {{$repr.Name}}Enum\n", s)
-	{{end}}
+	{{end -}}
 	}
 
-{{if .IsBitflag}}
+	{{if .IsBitflag -}}
 	var val = 0
 
 	for _, part := range strings.Split(string(b), "{{.FlagSep}}") {
 		switch part {
-		{{range $f := .Fields}}
+		{{range $f := .Fields -}}
 		case "{{$f.String}}":
 			val |= {{$f.Value}}
-		{{end}}
+		{{end -}}
   	default:
 			log.Printf("Unexpected value: %q while unmarshaling {{$repr.Name}}Enum\n", part)
 		}
 	}
 
 	self.value = {{$intType}}(val)
-{{end}}
+	{{end -}}
 
 	return nil
 }
-{{else}}
+{{else -}}
 func (self *{{$repr.Name}}Enum) UnmarshalJSON(b []byte) error {
 	var n, err = strconv.ParseUint(string(b), 10, 64)
 	if err != nil {
@@ -185,9 +186,10 @@ func (self *{{$repr.Name}}Enum) UnmarshalJSON(b []byte) error {
 	self.value = {{$intType}}(n)
 	return nil
 }
-{{end}}
+{{- end}}
 
-{{if .IsBitflag}}
+{{- if .IsBitflag}}
+// Bitflag enum methods
 func (self {{$repr.Name}}Enum) Add(v {{$repr.Name}}Enum) {{$repr.Name}}Enum {
 	self.value |= v.value
 	return self
@@ -233,6 +235,6 @@ func (self {{$repr.Name}}Enum) HasAll(v ...{{$repr.Name}}Enum) bool {
 	}
 	return true
 }
-{{end}}
-{{end}}
+{{end -}}
+{{end -}}
 `))
