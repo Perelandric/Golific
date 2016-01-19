@@ -23,6 +23,7 @@ Buz --description="Some description"
 @enum --name=Animal --json=string
 Dog --string=dog --description="Your best friend, and you know it."
 Cat --string=cat --description="Your best friend, but doesn't always show it."
+Horse --string=horse --description="Everyone loves horses."
 */
 
 type tester struct {
@@ -56,4 +57,7 @@ func main() {
 	jj, err := json.Marshal(&res)
 	fmt.Printf("%s\n", jj) // {"Name":"Bart Simpson","Pet":"dog"}
 
+	for _, animal := range AnimalValues {
+		fmt.Printf("Kind: %s, Description: %q\n", animal, animal.Description())
+	}
 }
