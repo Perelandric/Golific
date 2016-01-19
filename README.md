@@ -229,8 +229,9 @@ All flags are optional, except for the `--name` flag. N/A is given for flags tha
 
 | Flag | Value | Behavior |
 | :--: | ----- | -------- |
-| `--name` | N/A | Required. The name of the enum, it's used as the name (or part of the name) of the generated identifiers. |
+| `--name` | Any valid Go identifier | Required. The name of the enum, it's used as the name (or part of the name) of the generated identifiers. |
 | `--bitflag` | N/A | Causes the numeric values generated to able to be used as bitflags. When used, a maximum of 64 variants is allowed. |
-| `--bitflag_separator` | Must be least 1 character long | Only valid when `--bitflag` is used. Defines the separator used when the `.String()` method is called on values that have multiple bits set, as well as when `string` is used for JSON/XML marshaling and/or unmarshaling. |
+| `--bitflag_separator` | At least 1 character value. Default is "," | Only valid when `--bitflag` is used. Defines the separator used when the `.String()` method is called on values that have multiple bits set, as well as when `string` is used for JSON/XML marshaling and/or unmarshaling. |
 | `--iterator_name` | Any valid Go identifier | Alternate identifier name used for the array of variants generated. Used to resolve conflicts. The default name is `Values` |
-| `--json` | N/A | Sets the type of marshaler and unmarshaler to use. The `string` option will use the `.String()` representation of the variant, whereas the `number` will use the numeric value. |
+| `--json` | Allowed values: "string" or "value" | Sets the type of marshaler and unmarshaler to use for JSON. The `string` option will use the `.String()` representation of the variant, whereas the `number` will use the numeric value. |
+| `--xml` | Allowed values: "string" or "value" | Sets the type of marshaler and unmarshaler to use for XML. The `string` option will use the `.String()` representation of the variant, whereas the `number` will use the numeric value. |
