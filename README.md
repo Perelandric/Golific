@@ -1,6 +1,6 @@
 # GoEnum
 
-**GoEnum** works with the `generate` command to create namespaced enums using structs, providing have greater type safety as well as other features, including:
+**GoEnum** works with the `generate` command to create namespaced enums using structs, providing greater type safety as well as other features, including:
 
  - A `String()` method, allowing you to print the name of the enum variant.
  - The ability to optionally assign a custom value for `String()`.
@@ -8,7 +8,7 @@
  - The ability to marshal and/or unmarshal JSON (TODO: and XML) to the variant name or custom string value instead of the number.
  - A `Value()` method for retreiving the numeric representation of the variant.
  - The ability to assign a custom numeric value.
- - The ability to define an enum as bitflags.
+ - The ability to define an enum's variants as bitflags.
  - A generated array of the variants, to be used with a `range` loop.
  
 
@@ -32,6 +32,8 @@
   - Yes, each variant can have a description assigned using the `--description` flag, which is accessed using the `.Description()` method.
  - **Can I have JSON (TODO: and XML) marshaled to and unmarshaled from the string value instead of the number?**
   - Yes, using the `--marshal` and `--unmarshal` flags. There are also flags to set specifically JSON or XML.
+ - **Can I enumerate the variants of an enum using a `range` loop?
+  - Yes, an array holding the variants is generated, which can be used in a typical `range` loop.
 
 *Efficiency*
  - **How are the variants stored and referenced?**
@@ -55,3 +57,5 @@
 
 
 # Documentation
+
+*(coming soon)*
