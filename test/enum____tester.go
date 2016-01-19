@@ -12,16 +12,16 @@ FooEnum - bit flags
 
 ******************************/
 
-type FooEnum struct{ value_1msupeku72oc7 uint8 }
+type FooEnum struct{ value_1ovtc2knl15cc uint8 }
 
 var Foo = struct {
 	Bar FooEnum
 	Baz FooEnum
 	Buz FooEnum
 }{
-	Bar: FooEnum{value_1msupeku72oc7: 1},
-	Baz: FooEnum{value_1msupeku72oc7: 2},
-	Buz: FooEnum{value_1msupeku72oc7: 4},
+	Bar: FooEnum{value_1ovtc2knl15cc: 1},
+	Baz: FooEnum{value_1ovtc2knl15cc: 2},
+	Buz: FooEnum{value_1ovtc2knl15cc: 4},
 }
 
 // Used to iterate in range loops
@@ -31,16 +31,16 @@ var foobar = [...]FooEnum{
 
 // Get the integer value of the enum variant
 func (self FooEnum) Value() uint8 {
-	return self.value_1msupeku72oc7
+	return self.value_1ovtc2knl15cc
 }
 
 func (self FooEnum) IntValue() int {
-	return int(self.value_1msupeku72oc7)
+	return int(self.value_1ovtc2knl15cc)
 }
 
 // Get the string representation of the enum variant
 func (self FooEnum) String() string {
-	switch self.value_1msupeku72oc7 {
+	switch self.value_1ovtc2knl15cc {
 	case 1:
 		return "bar"
 	case 2:
@@ -49,14 +49,14 @@ func (self FooEnum) String() string {
 		return "Buz"
 	}
 
-	if self.value_1msupeku72oc7 == 0 {
+	if self.value_1ovtc2knl15cc == 0 {
 		return ""
 	}
 
 	var vals = make([]string, 0, 3/2)
 
 	for _, item := range foobar {
-		if self.value_1msupeku72oc7&item.value_1msupeku72oc7 == item.value_1msupeku72oc7 {
+		if self.value_1ovtc2knl15cc&item.value_1ovtc2knl15cc == item.value_1ovtc2knl15cc {
 			vals = append(vals, item.String())
 		}
 	}
@@ -65,7 +65,7 @@ func (self FooEnum) String() string {
 
 // Get the string description of the enum variant
 func (self FooEnum) Description() string {
-	switch self.value_1msupeku72oc7 {
+	switch self.value_1ovtc2knl15cc {
 	case 1:
 		return "bar"
 	case 2:
@@ -93,13 +93,13 @@ func (self *FooEnum) UnmarshalJSON(b []byte) error {
 
 	switch s {
 	case "bar":
-		self.value_1msupeku72oc7 = 1
+		self.value_1ovtc2knl15cc = 1
 		return nil
 	case "baz":
-		self.value_1msupeku72oc7 = 2
+		self.value_1ovtc2knl15cc = 2
 		return nil
 	case "Buz":
-		self.value_1msupeku72oc7 = 4
+		self.value_1ovtc2knl15cc = 4
 		return nil
 	}
 
@@ -118,42 +118,42 @@ func (self *FooEnum) UnmarshalJSON(b []byte) error {
 		}
 	}
 
-	self.value_1msupeku72oc7 = uint8(val)
+	self.value_1ovtc2knl15cc = uint8(val)
 	return nil
 }
 
 // Bitflag enum methods
 func (self FooEnum) Add(v FooEnum) FooEnum {
-	self.value_1msupeku72oc7 |= v.value_1msupeku72oc7
+	self.value_1ovtc2knl15cc |= v.value_1ovtc2knl15cc
 	return self
 }
 
 func (self FooEnum) AddAll(v ...FooEnum) FooEnum {
 	for _, item := range v {
-		self.value_1msupeku72oc7 |= item.value_1msupeku72oc7
+		self.value_1ovtc2knl15cc |= item.value_1ovtc2knl15cc
 	}
 	return self
 }
 
 func (self FooEnum) Remove(v FooEnum) FooEnum {
-	self.value_1msupeku72oc7 &^= v.value_1msupeku72oc7
+	self.value_1ovtc2knl15cc &^= v.value_1ovtc2knl15cc
 	return self
 }
 
 func (self FooEnum) RemoveAll(v ...FooEnum) FooEnum {
 	for _, item := range v {
-		self.value_1msupeku72oc7 &^= item.value_1msupeku72oc7
+		self.value_1ovtc2knl15cc &^= item.value_1ovtc2knl15cc
 	}
 	return self
 }
 
 func (self FooEnum) Has(v FooEnum) bool {
-	return self.value_1msupeku72oc7&v.value_1msupeku72oc7 == v.value_1msupeku72oc7
+	return self.value_1ovtc2knl15cc&v.value_1ovtc2knl15cc == v.value_1ovtc2knl15cc
 }
 
 func (self FooEnum) HasAny(v ...FooEnum) bool {
 	for _, item := range v {
-		if self.value_1msupeku72oc7&item.value_1msupeku72oc7 == item.value_1msupeku72oc7 {
+		if self.value_1ovtc2knl15cc&item.value_1ovtc2knl15cc == item.value_1ovtc2knl15cc {
 			return true
 		}
 	}
@@ -162,7 +162,7 @@ func (self FooEnum) HasAny(v ...FooEnum) bool {
 
 func (self FooEnum) HasAll(v ...FooEnum) bool {
 	for _, item := range v {
-		if self.value_1msupeku72oc7&item.value_1msupeku72oc7 != item.value_1msupeku72oc7 {
+		if self.value_1ovtc2knl15cc&item.value_1ovtc2knl15cc != item.value_1ovtc2knl15cc {
 			return false
 		}
 	}
@@ -175,16 +175,16 @@ OofEnum
 
 ******************************/
 
-type OofEnum struct{ value_1f4fcczk9kcin uint8 }
+type OofEnum struct{ value_1g5hkn4bc2ens uint8 }
 
 var Oof = struct {
 	Bar OofEnum
 	Baz OofEnum
 	Buz OofEnum
 }{
-	Bar: OofEnum{value_1f4fcczk9kcin: 1},
-	Baz: OofEnum{value_1f4fcczk9kcin: 123},
-	Buz: OofEnum{value_1f4fcczk9kcin: 3},
+	Bar: OofEnum{value_1g5hkn4bc2ens: 1},
+	Baz: OofEnum{value_1g5hkn4bc2ens: 123},
+	Buz: OofEnum{value_1g5hkn4bc2ens: 3},
 }
 
 // Used to iterate in range loops
@@ -194,16 +194,16 @@ var OofValues = [...]OofEnum{
 
 // Get the integer value of the enum variant
 func (self OofEnum) Value() uint8 {
-	return self.value_1f4fcczk9kcin
+	return self.value_1g5hkn4bc2ens
 }
 
 func (self OofEnum) IntValue() int {
-	return int(self.value_1f4fcczk9kcin)
+	return int(self.value_1g5hkn4bc2ens)
 }
 
 // Get the string representation of the enum variant
 func (self OofEnum) String() string {
-	switch self.value_1f4fcczk9kcin {
+	switch self.value_1g5hkn4bc2ens {
 	case 1:
 		return "bar"
 	case 123:
@@ -217,7 +217,7 @@ func (self OofEnum) String() string {
 
 // Get the string description of the enum variant
 func (self OofEnum) Description() string {
-	switch self.value_1f4fcczk9kcin {
+	switch self.value_1g5hkn4bc2ens {
 	case 1:
 		return "bar"
 	case 123:
@@ -238,6 +238,6 @@ func (self *OofEnum) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	self.value_1f4fcczk9kcin = uint8(n)
+	self.value_1g5hkn4bc2ens = uint8(n)
 	return nil
 }

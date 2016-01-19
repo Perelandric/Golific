@@ -110,7 +110,9 @@ func (repr *EnumRepr) GetIntType() string {
 	return "uint64"
 }
 
-func (self *EnumData) checkValidity(flgs, flds, errs bool) {
+func (self *EnumData) checkValidity(flgs, flds, errs bool, repr *EnumRepr) {
+	const warnMarshal = "WARNING: %s marshal and unmarshal do not match for %q\n"
+
 	if !flgs || !flds || errs {
 		if errs {
 			log.Println("Enums with errors are excluded")
@@ -119,6 +121,17 @@ func (self *EnumData) checkValidity(flgs, flds, errs bool) {
 		}
 		if len(self.Reprs) > 0 {
 			self.Reprs = self.Reprs[0 : len(self.Reprs)-1]
+		}
+
+	} else if repr != nil {
+		// Warn if marshaling to string and unmarshaling to number, or vice versa.
+		if (repr.flags&jsonMarshalIsString == 0) !=
+			(repr.flags&jsonUnmarshalIsString == 0) {
+			log.Printf(warnMarshal, "JSON", repr.Name)
+		}
+		if (repr.flags&xmlMarshalIsString == 0) !=
+			(repr.flags&xmlUnmarshalIsString == 0) {
+			log.Printf(warnMarshal, "XML", repr.Name)
 		}
 	}
 }
@@ -136,7 +149,7 @@ func (self *EnumData) doComment(cgText string) {
 
 		if strings.HasPrefix(line, "@enum") {
 			firstPass = false
-			self.checkValidity(doFlags, doFields, hasErrors)
+			self.checkValidity(doFlags, doFields, hasErrors, repr)
 
 			repr = &EnumRepr{
 				FlagSep: ",", // Go ahead and set the default even if not needed
@@ -190,7 +203,7 @@ func (self *EnumData) doComment(cgText string) {
 		}
 	}
 
-	self.checkValidity(doFlags, doFields, hasErrors)
+	self.checkValidity(doFlags, doFields, hasErrors, repr)
 }
 
 const unexpectedValue = "Unexpected value %q for %q\n"
@@ -237,17 +250,17 @@ func (self *EnumRepr) setFlags(flags string) bool {
 				return false
 			}
 
-		case "marshaler": // Set type of JSON and XML marshalers
+		case "json": // Set type of JSON marshaler and unmarshaler
 			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
 				return false
 			}
-			self.setMarshalingFlags(Name, value, jsonMarshalIsString|xmlMarshalIsString)
+			self.setMarshalingFlags(Name, value, jsonMarshalIsString|jsonUnmarshalIsString)
 
-		case "unmarshaler": // Set type of JSON and XML unmarshalers
+		case "xml": // Set type of XML marshaler and unmarshaler
 			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
 				return false
 			}
-			self.setMarshalingFlags(Name, value, jsonUnmarshalIsString|xmlUnmarshalIsString)
+			self.setMarshalingFlags(Name, value, xmlMarshalIsString|xmlUnmarshalIsString)
 
 		case "json_marshaler": // Set type of JSON marshaler
 			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
