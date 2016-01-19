@@ -220,3 +220,17 @@ Horse --string=horsie --description="Everyone loves horses."
 So our examples are now fully valid enum descriptors. As long as you have the `go:generate` annotation previously defined, you'll be able to run `go generate` and your new source file will be generated.
 
 The rest of the documentation will use the multi-line version of our descriptor example.
+
+*All Descriptor flags*
+
+These are the flags available for use in the main `@enum` descriptor. These are distinct from the field flags, which are listed later.
+
+All flags are optional, except for the `--name` flag. N/A is given for flags that do not accept a value.
+
+| Flag | Value | Behavior |
+| :--: | ----- | -------- |
+| `--name` | N/A | Required. The name of the enum, it's used as the name (or part of the name) of the generated identifiers. |
+| `--bitflag` | N/A | Causes the numeric values generated to able to be used as bitflags. When used, a maximum of 64 variants is allowed. |
+| `--bitflag_separator` | Must be least 1 character long | Only valid when `--bitflag` is used. Defines the separator used when the `.String()` method is called on values that have multiple bits set, as well as when `string` is used for JSON/XML marshaling and/or unmarshaling. |
+| `--iterator_name` | Any valid Go identifier | Alternate identifier name used for the array of variants generated. Used to resolve conflicts. The default name is `Values` |
+| `--json` | N/A | Sets the type of marshaler and unmarshaler to use. The `string` option will use the `.String()` representation of the variant, whereas the `number` will use the numeric value. |
