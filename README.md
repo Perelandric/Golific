@@ -12,29 +12,29 @@
 
 # Quick start
 
-This short example of how the enum descriptor syntax looks does not utilize all available features. See the documentation for more info.
+This is a short example of how the basic syntax looks and how it's used. See the documentation for more info.
 
 Installation:
 ```
 go install github.com/Perelandric/GoEnum
 ```
 
-Top of file (below imports):
+Top of your source (below imports):
 ```
 //go:generate GoEnum $GOFILE
 ```
 
-Enum descriptor syntax:
+Enum descriptor syntax in your source to create an enum named `Animal` that has 3 variants:
 ```
 /*
 @enum --name=Animal --json=string
-Dog --string=dog --description="Your best friend, and you know it."
-Cat --string=cat --description="Your best friend, but doesn't always show it."
-Horse --string=horse --description="Everyone loves horses."
+Dog --string=doggie --description="Your best friend, and you know it."
+Cat --string=kitty --description="Your best friend, but doesn't always show it."
+Horse --string=horsie --description="Everyone loves horses."
 */
 ```
 
-Run the generate tool from the project directory:
+Run Go's `generate` tool from the project directory:
 ```
 go generate
 ```
@@ -44,17 +44,19 @@ Use the enum in your code:
 ```
 type Resident struct {
  Name string
- Pet AnimalEnum
+ Pet AnimalEnum // The generated type for your Animal enum
 }
 
 res := Resident{
  Name: "Charlie Brown",
- Pet: Animal.Dog,
+ Pet: Animal.Dog, // Assign one of the variants
 }
 
+// The `--json=string` flag causes our custom `--string` value to be used in the resulting JSON
 j, err := json.Marshal(&res)
-fmt.Printf("%s\n", j) // {"Name":"Charlie Brown","Pet":"dog"}
+fmt.Printf("%s\n", j) // {"Name":"Charlie Brown","Pet":"doggie"}
 
+// Enumerate all the variants in a range loop
 for _, animal := range AnimalValues {
  fmt.Printf("Kind: %s, Description: %q\n", animal, animal.Description())
 }
@@ -201,18 +203,18 @@ Adding to the examples above, they may now look like this:
 ```
 /*
 @enum --name=Animal
-Dog --string=dog --description="Your best friend, and you know it."
-Cat --string=cat --description="Your best friend, but doesn't always show it."
-Horse --string=horse --description="Everyone loves horses."
+Dog --string=doggie --description="Your best friend, and you know it."
+Cat --string=kitty --description="Your best friend, but doesn't always show it."
+Horse --string=horsie --description="Everyone loves horses."
 */
 ```
 ```
 //
 // @enum
 // --name="Animal"
-// Dog --string=dog --description="Your best friend, and you know it."
-// Cat --string=cat --description="Your best friend, but doesn't always show it."
-// Horse --string=horse --description="Everyone loves horses."
+// Dog --string=doggie --description="Your best friend, and you know it."
+// Cat --string=kitty --description="Your best friend, but doesn't always show it."
+// Horse --string=horsie --description="Everyone loves horses."
 ```
 
 So our examples are now fully valid enum descriptors. As long as you have the `go:generate` annotation previously defined, you'll be able to run `go generate` and your new source file will be generated.

@@ -21,9 +21,9 @@ Buz --description="Some description"
 
 /*
 @enum --name=Animal --json=string
-Dog --string=dog --description="Your best friend, and you know it."
-Cat --string=cat --description="Your best friend, but doesn't always show it."
-Horse --string=horse --description="Everyone loves horses."
+Dog --string=doggy --description="Your best friend, and you know it."
+Cat --string=kitty --description="Your best friend, but doesn't always show it."
+Horse --string=horsie --description="Everyone loves horses."
 */
 
 type tester struct {
@@ -46,17 +46,19 @@ func main() {
 
 	type Resident struct {
 		Name string
-		Pet  AnimalEnum
+		Pet  AnimalEnum // The generated type for your Animal enum
 	}
 
 	res := Resident{
-		Name: "Bart Simpson",
-		Pet:  Animal.Dog,
+		Name: "Charlie Brown",
+		Pet:  Animal.Dog, // Assign one of the variants
 	}
 
+	// The `--json=string` flag causes our custom `--string` value to be used in the resulting JSON
 	jj, err := json.Marshal(&res)
-	fmt.Printf("%s\n", jj) // {"Name":"Bart Simpson","Pet":"dog"}
+	fmt.Printf("%s\n", jj) // {"Name":"Charlie Brown","Pet":"doggie"}
 
+	// Enumerate all the variants in a range loop
 	for _, animal := range AnimalValues {
 		fmt.Printf("Kind: %s, Description: %q\n", animal, animal.Description())
 	}
