@@ -50,7 +50,7 @@
 *Safety*
  - **Isn't it still possible to use a value of the base type in place of one of the variants?**
   - Technically yes, however the variants for each enum are generated with a `value` field that has a unique identifier appended to it, like `value_1cn7iw6qxr8ad`, so using a base value would be cumbersome and never accidental.
- - **Are new unique identifiers used in the variants' structs generated every time `generate` is run?**
+ - **Are the new unique identifiers used in the variants' structs generated every time `generate` is run?**
   - Yes. A pseudo-random number is used, so it is non-deterministic.
  - **Isn't it possible to overwrite one variant with another from the same enum?**
   - Unfortunately, Go does not allow struct values to be assigned to a `const`, so yes. However it would require `MyEnum.Foo = MyEnum.Bar`, which seems like an unlikely mistake.
