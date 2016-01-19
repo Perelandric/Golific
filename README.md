@@ -10,55 +10,55 @@
  - The ability to define an enum's variants as bitflags.
  - A generated array of the variants, to be used with a `range` loop.
 
- # Quick start
+# Quick start
 
- This short example of how the enum descriptor syntax looks does not utilize all available features. See the documentation for more info.
+This short example of how the enum descriptor syntax looks does not utilize all available features. See the documentation for more info.
 
- Installation:
- ```
- go install github.com/Perelandric/GoEnum
- ```
+Installation:
+```
+go install github.com/Perelandric/GoEnum
+```
 
- Top of file (below imports):
- ```
- //go:generate GoEnum $GOFILE
- ```
+Top of file (below imports):
+```
+//go:generate GoEnum $GOFILE
+```
 
- Enum descriptor syntax:
- ```
- /*
- @enum --name=Animal --json=string
- Dog --string=dog --description="Your best friend, and you know it."
- Cat --string=cat --description="Your best friend, but doesn't always show it."
- Horse --string=horse --description="Everyone loves horses."
- */
- ```
+Enum descriptor syntax:
+```
+/*
+@enum --name=Animal --json=string
+Dog --string=dog --description="Your best friend, and you know it."
+Cat --string=cat --description="Your best friend, but doesn't always show it."
+Horse --string=horse --description="Everyone loves horses."
+*/
+```
 
- Run the generate tool from the project directory:
- ```
- go generate
- ```
+Run the generate tool from the project directory:
+```
+go generate
+```
 
- Use the enum in your code:
+Use the enum in your code:
 
- ```
- type Resident struct {
-   Name string
-   Pet AnimalEnum
- }
+```
+type Resident struct {
+ Name string
+ Pet AnimalEnum
+}
 
- res := Resident{
-   Name: "Charlie Brown",
-   Pet: Animal.Dog,
- }
+res := Resident{
+ Name: "Charlie Brown",
+ Pet: Animal.Dog,
+}
 
- j, err := json.Marshal(&res)
- fmt.Printf("%s\n", j) // {"Name":"Charlie Brown","Pet":"dog"}
+j, err := json.Marshal(&res)
+fmt.Printf("%s\n", j) // {"Name":"Charlie Brown","Pet":"dog"}
 
- for _, animal := range AnimalValues {
-   fmt.Printf("Kind: %s, Description: %q\n", animal, animal.Description())
- }
- ```
+for _, animal := range AnimalValues {
+ fmt.Printf("Kind: %s, Description: %q\n", animal, animal.Description())
+}
+```
 
 # FAQ
 *General*
