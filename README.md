@@ -14,7 +14,7 @@
 
 # FAQ
 *General*
- - **Why?**
+ - **Why was this created?**
   - Primarily in order to achieve greater type safety by restricting values of an enum type to only those variants provided.
  - **Can't this be done with `const` and a type alias?**
   - Yes, however a value of the base type can be substituted accidentally, resulting in bugs. Also, using `consts` pollutes the variable namespace, which can be an issue when overlapping names are needed in different categories.
@@ -32,7 +32,7 @@
   - Yes, each variant can have a description assigned using the `--description` flag, which is accessed using the `.Description()` method.
  - **Can I have JSON (TODO: and XML) marshaled to and unmarshaled from the string value instead of the number?**
   - Yes, using the `--marshal` and `--unmarshal` flags. There are also flags to set specifically JSON or XML.
- - **Can I enumerate the variants of an enum using a `range` loop?
+ - **Can I enumerate the variants of an enum using a `range` loop?**
   - Yes, an array holding the variants is generated, which can be used in a typical `range` loop.
 
 *Efficiency*
