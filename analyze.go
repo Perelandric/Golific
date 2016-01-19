@@ -132,8 +132,9 @@ func (self *EnumData) doComment(cgText string) {
 	var repr *EnumRepr
 
 	for line := skipEmptyLines(s); len(line) > 0; line = skipEmptyLines(s) {
+		line = strings.TrimSpace(line)
 
-		if strings.TrimSpace(line) == "@enum" {
+		if strings.HasPrefix(line, "@enum") {
 			firstPass = false
 			self.checkValidity(doFlags, doFields, hasErrors)
 
@@ -144,13 +145,26 @@ func (self *EnumData) doComment(cgText string) {
 
 			doFlags, doFields, hasErrors = false, false, false
 
+			line = line[5:] // strip out the @enum
+
+			if len(strings.TrimSpace(line)) == 0 {
+				continue
+
+			} else if unicode.IsSpace(rune(line[0])) {
+				line = strings.TrimSpace(line)
+
+			} else {
+				hasErrors = true
+				continue
+			}
 		} else if firstPass {
 			return // comment group didn't start with @enum
 
 		} else if hasErrors {
 			continue
+		}
 
-		} else if strings.HasPrefix(strings.TrimSpace(line), "--") {
+		if strings.HasPrefix(line, "--") {
 			if doFields {
 				log.Println("Flags must come before enum variant definitions")
 				hasErrors = true
