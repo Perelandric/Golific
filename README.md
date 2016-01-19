@@ -20,12 +20,12 @@ go install github.com/Perelandric/GoEnum
 ```
 
 Top of your source (below imports):
-```
+``` go
 //go:generate GoEnum $GOFILE
 ```
 
 Enum descriptor syntax in your source to create an enum named `Animal` that has 3 variants:
-```
+``` go
 /*
 @enum --name=Animal --json=string
 Dog --string=doggie --description="Your best friend, and you know it."
@@ -41,7 +41,7 @@ go generate
 
 Use the enum in your code:
 
-```
+``` go
 type Resident struct {
  Name string
  Pet AnimalEnum // The generated type for your Animal enum
@@ -135,7 +135,7 @@ Do not edit the generated file, as it will be overwritten every time you call `g
 
 As with all files that rely on Go's `generate` command, your file must have the `go:generate` directive below the file package name and imports. For GoEnum, it should look like this:
 
-```
+``` go
 //go:generate GoEnum $GOFILE
 ```
 
@@ -151,12 +151,12 @@ Multiple `@enum` descriptors may be defined in a single comment block.
 
 The beginning of an descriptor can look like either of these *(incomplete)* examples:
 
-```
+``` go
 /*
 @enum
 */
 ```
-```
+``` go
 //
 // @enum
 ```
@@ -171,12 +171,12 @@ There's always at least one flag required. That's the `--name` flag. This provid
 
 So adding the `name` flag, our *(still incomplete)* examples now look like this:
 
-```
+``` go
 /*
 @enum --name=Animal
 */
 ```
-```
+``` go
 //
 // @enum
 // --name="Animal"
@@ -200,7 +200,7 @@ Each variant must be entirely defined on its own line. Lines that are long becau
 
 Adding to the examples above, they may now look like this:
 
-```
+``` go
 /*
 @enum --name=Animal
 Dog --string=doggie --description="Your best friend, and you know it."
@@ -208,7 +208,7 @@ Cat --string=kitty --description="Your best friend, but doesn't always show it."
 Horse --string=horsie --description="Everyone loves horses."
 */
 ```
-```
+``` go
 //
 // @enum
 // --name="Animal"
