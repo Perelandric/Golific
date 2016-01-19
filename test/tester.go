@@ -1,4 +1,4 @@
-package test
+package main
 
 import (
 	"encoding/json"
@@ -19,12 +19,18 @@ Baz --value = 123
 Buz --description="Some description"
 */
 
+/*
+@enum --name=Animal --json=string
+Dog --string=dog --description="Your best friend, and you know it."
+Cat --string=cat --description="Your best friend, but doesn't always show it."
+*/
+
 type tester struct {
 	F FooEnum
 	O OofEnum
 }
 
-func init() {
+func main() {
 	var t = tester{
 		F: Foo.Baz,
 		O: Oof.Buz,
@@ -36,4 +42,18 @@ func init() {
 		return
 	}
 	fmt.Println(string(j))
+
+	type Resident struct {
+		Name string
+		Pet  AnimalEnum
+	}
+
+	res := Resident{
+		Name: "Bart Simpson",
+		Pet:  Animal.Dog,
+	}
+
+	jj, err := json.Marshal(&res)
+	fmt.Printf("%s\n", jj) // {"Name":"Bart Simpson","Pet":"dog"}
+
 }
