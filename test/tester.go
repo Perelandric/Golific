@@ -8,20 +8,21 @@ import (
 //go:generate GoEnum $GOFILE
 
 /*
-@enum --name=Foo --bitflags --bitflag_separator="," --iterator_name="foobar" --json=string
+@enum Foo --bitflags --bitflag_separator="," --iterator_name="foobar" --json=string
 Bar --string=bar
 Baz --string=baz --description="This is the description"
 Buz
 
-@enum --name=Oof
+@enum Oof
 Bar --string="bar"
 Baz --value = 123
 Buz --description="Some description"
 */
 
 /*
-@enum --name=Animal --json=string
-Dog --string=doggy --description="Your best friend, and you know it."
+@enum Animal --json=string
+Dog --string=doggy
+		--description="Your best friend, and you know it."
 Cat --string=kitty --description="Your best friend, but doesn't always show it."
 Horse --string=horsie --description="Everyone loves horses."
 */

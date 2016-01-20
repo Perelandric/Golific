@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"go/parser"
 	"go/token"
@@ -43,6 +42,12 @@ type FieldRepr struct {
 	String      string
 	Description string
 	Value       int64
+}
+
+type Flag struct {
+	Name       string
+	Value      string
+	FoundEqual bool
 }
 
 func (self *EnumData) DoFile(file string) error {
@@ -137,338 +142,395 @@ func (self *EnumData) checkValidity(flgs, flds, errs bool, repr *EnumRepr) {
 }
 
 func (self *EnumData) doComment(cgText string) {
-	s := bufio.NewScanner(strings.NewReader(cgText))
+	cgText = strings.TrimSpace(cgText)
+	var err error
 
-	firstPass := true
-	doFlags, doFields, hasErrors := true, true, false
-
-	var repr *EnumRepr
-
-	for line := skipEmptyLines(s); len(line) > 0; line = skipEmptyLines(s) {
-		line = strings.TrimSpace(line)
-
-		if strings.HasPrefix(line, "@enum") {
-			firstPass = false
-			self.checkValidity(doFlags, doFields, hasErrors, repr)
-
-			repr = &EnumRepr{
-				FlagSep: ",", // Go ahead and set the default even if not needed
-			}
-			self.Reprs = append(self.Reprs, repr)
-
-			doFlags, doFields, hasErrors = false, false, false
-
-			line = line[5:] // strip out the @enum
-
-			if len(strings.TrimSpace(line)) == 0 {
-				continue
-
-			} else if unicode.IsSpace(rune(line[0])) {
-				line = strings.TrimSpace(line)
-
-			} else {
-				hasErrors = true
-				continue
-			}
-		} else if firstPass {
-			return // comment group didn't start with @enum
-
-		} else if hasErrors {
-			continue
-		}
-
-		if strings.HasPrefix(line, "--") {
-			if doFields {
-				log.Println("Flags must come before enum variant definitions")
-				hasErrors = true
-				continue
-			}
-			doFlags = true
-
-			if repr.setFlags(line) == false {
-				hasErrors = true
-			}
-
-		} else { // Get the field definitions
-			if !doFlags {
-				log.Println("No flags were defined before the first enum variant")
-				hasErrors = true
-				continue
-			}
-			doFields = true
-
-			if repr.setField(line) == false {
-				hasErrors = true
-			}
-		}
+	if !strings.HasPrefix(cgText, "@enum") { // First item must be @enum
+		return
 	}
 
-	self.checkValidity(doFlags, doFields, hasErrors, repr)
-}
+	for {
+		cgText = strings.TrimSpace(cgText)
 
-const unexpectedValue = "Unexpected value %q for %q\n"
-
-func (self *EnumRepr) setFlags(flags string) bool {
-	var Name, value string
-	var found, foundEqual bool
-
-	for len(flags) > 0 {
-		if flags, found = trashUntil(strings.TrimSpace(flags), "--", true); !found {
-			if len(strings.TrimSpace(flags)) > 0 {
-				log.Printf(`Expected "--", but found: %q`, flags)
-				return false
-			}
+		var idx = strings.Index(cgText, "@enum")
+		if idx != 0 {
 			break
 		}
 
-		flags, Name = getIdent(flags)
+		cgText = cgText[5:] // Strip away the `@enum`
 
-		switch strings.ToLower(Name) {
+		if cgText, err = self.doEnum(cgText); err != nil {
+			log.Println(err)
 
-		case "name": // Set the base Name for the enum
-			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
-				return false
+			if idx := strings.Index(cgText, "@enum"); idx == -1 {
+				break
+			} else {
+				cgText = cgText[idx:] // Slice away everyting until the `@enum`
 			}
+		}
+	}
+}
 
-			if len(self.Name) > 0 {
-				log.Printf("Name is already set: %q, but found: %q\n", self.Name, value)
-				return false
+func (self *EnumData) doEnum(cgText string) (string, error) {
+	var enum EnumRepr
+	var err error
+
+	if cgText, enum.Name, err = getIdent(strings.TrimSpace(cgText)); err != nil {
+		return cgText, err
+	}
+
+	if cgText, err = enum.gatherFlags(cgText); err != nil {
+		return cgText, err
+	}
+
+	if cgText, err = enum.doFields(cgText); err != nil {
+		return cgText, err
+	}
+
+	self.Reprs = append(self.Reprs, &enum)
+
+	return cgText, nil
+}
+
+func (self *EnumRepr) doFields(cgText string) (_ string, err error) {
+	for len(cgText) > 0 && !strings.HasPrefix(cgText, "@enum") {
+		var f = FieldRepr{
+			Value: -1,
+		}
+
+		cgText, f.Name, err = getIdent(cgText)
+		if err != nil {
+			return cgText, err
+		}
+
+		cgText, err = f.gatherFlags(cgText)
+		if err != nil {
+			return cgText, err
+		}
+
+		if self.flags&bitflags == bitflags && f.Value != -1 {
+			return cgText, fmt.Errorf("bitflags may not have a custom --value")
+		}
+
+		if len(f.String) == 0 {
+			f.String = f.Name
+		}
+		if len(f.Description) == 0 {
+			f.Description = f.String
+		}
+
+		if f.Value == -1 {
+			if self.flags&bitflags == bitflags {
+				f.Value = 1 << uint(len(self.Fields))
+			} else {
+				// TODO: Make sure there are no Custom number conflicts
+				f.Value = int64(len(self.Fields) + 1)
 			}
+		}
 
-			self.Name = value
+		self.Fields = append(self.Fields, &f)
+	}
+
+	if len(self.Fields) == 0 {
+		return cgText, fmt.Errorf("Enums must have at least one variant defined")
+	}
+
+	return cgText, nil
+}
+
+func (self *EnumRepr) gatherFlags(cgText string) (string, error) {
+	cgText, flags, foundNewline, err := gatherFlags(cgText)
+	if err != nil {
+		return cgText, err
+	}
+
+	if foundNewline == false {
+		return cgText, fmt.Errorf("Expected line break after last descriptor flag")
+	}
+
+	for _, flag := range flags {
+		switch strings.ToLower(flag.Name) {
 
 		case "bitflags": // The enum values are to be bitflags
 			self.flags |= bitflags
 
 		case "bitflag_separator": // The separator used when joining bitflags
-			if flags, self.FlagSep, foundEqual = getValue(Name, flags); !foundEqual {
-				return false
+			if !flag.FoundEqual || len(flag.Value) == 0 {
+				return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
 			}
-			if self.FlagSep == "" {
-				log.Println("`--flag_separator` must have at least one character")
-				return false
-			}
+			self.FlagSep = flag.Value
 
 		case "iterator_name": // Custom Name for Array of values
-			if flags, self.iterName, foundEqual = getValue(Name, flags); !foundEqual {
-				return false
+			if !flag.FoundEqual || !isIdent(flag.Value) {
+				return cgText, fmt.Errorf("%q requires a valid identifier", flag.Name)
 			}
+			self.iterName = flag.Value
 
 		case "json": // Set type of JSON marshaler and unmarshaler
-			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
-				return false
+			if !flag.FoundEqual || len(flag.Value) == 0 {
+				return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
 			}
-			self.setMarshalingFlags(Name, value, jsonMarshalIsString|jsonUnmarshalIsString)
+			err = self.setMarshal(flag, jsonMarshalIsString|jsonUnmarshalIsString)
+			if err != nil {
+				return cgText, err
+			}
 
 		case "xml": // Set type of XML marshaler and unmarshaler
-			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
-				return false
+			if !flag.FoundEqual || len(flag.Value) == 0 {
+				return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
 			}
-			self.setMarshalingFlags(Name, value, xmlMarshalIsString|xmlUnmarshalIsString)
+			err = self.setMarshal(flag, xmlMarshalIsString|xmlUnmarshalIsString)
+			if err != nil {
+				return cgText, err
+			}
 
 		case "json_marshal": // Set type of JSON marshaler
-			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
-				return false
+			if !flag.FoundEqual || len(flag.Value) == 0 {
+				return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
 			}
-			self.setMarshalingFlags(Name, value, jsonMarshalIsString)
+			err = self.setMarshal(flag, jsonMarshalIsString)
+			if err != nil {
+				return cgText, err
+			}
 
 		case "json_unmarshal": // Set type of JSON unmarshaler
-			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
-				return false
+			if !flag.FoundEqual || len(flag.Value) == 0 {
+				return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
 			}
-			self.setMarshalingFlags(Name, value, jsonUnmarshalIsString)
+			if err = self.setMarshal(flag, jsonUnmarshalIsString); err != nil {
+				return cgText, err
+			}
 
 		case "xml_marshal": // Set type of XML marshaler
-			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
-				return false
+			if !flag.FoundEqual || len(flag.Value) == 0 {
+				return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
 			}
-			self.setMarshalingFlags(Name, value, xmlMarshalIsString)
+			if err = self.setMarshal(flag, xmlMarshalIsString); err != nil {
+				return cgText, err
+			}
 
 		case "xml_unmarshal": // Set type of XML unmarshaler
-			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
-				return false
+			if !flag.FoundEqual || len(flag.Value) == 0 {
+				return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
 			}
-			self.setMarshalingFlags(Name, value, xmlUnmarshalIsString)
+			if err = self.setMarshal(flag, xmlUnmarshalIsString); err != nil {
+				return cgText, err
+			}
 
 		default:
-			log.Printf("Unknown flag %q\n", Name)
+			return cgText, fmt.Errorf("Unknown flag %q", flag.Name)
 		}
 	}
-	return true
+
+	return cgText, nil
 }
 
-func (self *EnumRepr) setField(field string) bool {
-	var f = FieldRepr{
-		Value: -1,
+func (self *FieldRepr) gatherFlags(cgText string) (string, error) {
+	cgText, flags, foundNewline, err := gatherFlags(cgText)
+	if err != nil {
+		return cgText, err
 	}
 
-	field, f.Name = getIdent(strings.TrimSpace(field))
-
-	if len(f.Name) == 0 {
-		log.Println("Field Name is empty")
-		return false
+	if len(cgText) > 0 && !foundNewline {
+		return cgText, fmt.Errorf("Expected line break after variant definition")
 	}
 
-	var Name string
-	var foundEqual, found bool
-
-	for len(field) > 0 {
-		if field, found = trashUntil(strings.TrimSpace(field), "--", true); !found {
-			if len(strings.TrimSpace(field)) > 0 {
-				log.Printf(`Expected "--", but found: %q`, field)
-			}
-			break
-		}
-
-		field, Name = getIdent(field)
-
-		switch strings.ToLower(Name) {
+	for _, flag := range flags {
+		switch strings.ToLower(flag.Name) {
 
 		case "string": // The string representation of the field
-			if field, f.String, foundEqual = getValue(Name, field); !foundEqual {
-				return false
+			if !flag.FoundEqual {
+				return cgText, fmt.Errorf("Expected value after %q", flag.Name)
 			}
+			self.String = flag.Value
 
 		case "description": // The description of the field
-			if field, f.Description, foundEqual = getValue(Name, field); !foundEqual {
-				return false
+			if !flag.FoundEqual {
+				return cgText, fmt.Errorf("Expected value after %q", flag.Name)
 			}
+			self.Description = flag.Value
 
 		case "value": // Custom value for the field
-			var v string
-
-			if field, v, foundEqual = getValue(Name, field); !foundEqual {
-				return false
+			if !flag.FoundEqual {
+				return cgText, fmt.Errorf("Expected value after %q", flag.Name)
 			}
-			if n, err := strconv.ParseUint(v, 10, 32); err != nil {
-				log.Printf("%q is not a valid uint\n", v)
-				return false
+
+			if n, err := strconv.ParseUint(flag.Value, 10, 32); err != nil {
+				return cgText, fmt.Errorf("%q is not a valid uint", flag.Value)
 			} else {
-				f.Value = int64(n)
+				self.Value = int64(n)
 			}
+
 		default:
-			log.Printf("Unknown flag %q\n", Name)
+			return cgText, fmt.Errorf("Unknown flag %q", flag.Name)
 		}
 	}
 
-	if self.flags&bitflags == bitflags && f.Value != -1 {
-		log.Println("bitflag enums may not have a custom --value setting")
-		return false
-	}
-
-	if len(f.String) == 0 {
-		f.String = f.Name
-	}
-	if len(f.Description) == 0 {
-		f.Description = f.String
-	}
-
-	if f.Value == -1 {
-		if self.flags&bitflags == bitflags {
-			f.Value = 1 << uint(len(self.Fields))
-		} else {
-			// TODO: Make sure there are no Custom number conflicts
-			f.Value = int64(len(self.Fields) + 1)
-		}
-	}
-
-	self.Fields = append(self.Fields, &f)
-
-	return true
+	return cgText, nil
 }
 
-func (self *EnumRepr) setMarshalingFlags(Name, value string, flags uint) {
-	switch strings.ToLower(value) {
+func (self *EnumRepr) setMarshal(flag Flag, flags uint) error {
+	switch strings.ToLower(flag.Value) {
 	case "string":
 		self.flags |= flags
 	case "value":
 		self.flags &^= flags
 	default:
-		log.Printf(unexpectedValue, value, Name)
+		return fmt.Errorf("Unexpected value %q for %q", flag.Value, flag.Name)
 	}
+	return nil
 }
 
 func (self *EnumRepr) IsBitflag() bool {
 	return self.flags&bitflags == bitflags
 }
 
-func trashUntil(source, search string, exclude bool) (string, bool) {
-	var idx = strings.Index(source, search)
-	if idx == -1 {
-		return source, false
+func getFlagWord(source string) (_, word string, err error) {
+	var n = 0
+
+	for _, r := range source {
+		if ('a' <= r && r <= 'z') || r == '_' {
+			n += utf8.RuneLen(r)
+		} else if r == '=' || unicode.IsSpace(r) {
+			break
+		} else {
+			return source, "", fmt.Errorf("Invalid flag: %q", source[:n])
+		}
 	}
 
-	if idx > 0 {
-		log.Printf("Expected %q, but found: %q\n", search, source[0:idx])
+	if n == 0 {
+		return "", "", fmt.Errorf("Invalid flag: %q", "")
 	}
 
-	if exclude { // caller wants the leading search string removed
-		idx += len(search)
-	}
-	return source[idx:], true
+	return source[n:], source[:n], nil
 }
 
-func getIdent(source string) (_ string, word string) {
-	var i = 0
-	for j, c := range source {
-		if ('a' <= c && c <= 'z') || c == '_' || ('A' <= c && c <= 'Z') ||
-			(j > 0 && '0' <= c && c <= '9') {
-			word += string(c)
-			i += utf8.RuneLen(c)
+func getIdent(source string) (_, ident string, err error) {
+	source = strings.TrimSpace(source)
+
+	var n = 0
+
+	for i, r := range source {
+		if isIdentRune(i, r) {
+			n += utf8.RuneLen(r)
+		} else if unicode.IsSpace(r) {
+			break
+		} else {
+			return source, "", fmt.Errorf("Invalid identifier: %q", source[:n])
+		}
+	}
+
+	if n == 0 {
+		return "", "", fmt.Errorf("Invalid identifier: %q", "")
+	}
+
+	return source[n:], source[:n], nil
+}
+
+func isIdent(word string) bool {
+	if len(word) == 0 {
+		return false
+	}
+	for i, r := range word {
+		if !isIdentRune(i, r) {
+			return false
+		}
+	}
+	return true
+}
+
+func isIdentRune(i int, r rune) bool {
+	if unicode.IsLetter(r) == false && unicode.IsDigit(r) == false && r != '_' {
+		return false
+	}
+	if i == 0 && unicode.IsDigit(r) {
+		return false
+	}
+	return true
+}
+
+// Does a left trim, but also checks if a newline was found
+func trimLeftCheckNewline(s string) (string, bool) {
+	var n = 0
+	var found = false
+
+	for _, r := range s {
+		if unicode.IsSpace(r) {
+			n += utf8.RuneLen(r)
+
+			if r == '\n' || r == '\r' {
+				found = true
+			}
 		} else {
 			break
 		}
 	}
-	return source[i:], word
+	return s[n:], found
 }
 
-func getValue(Name, source string) (_, value string, foundEqual bool) {
-	if len(source) == 0 {
-		return "", "", false
-	}
+func gatherFlags(cgText string) (string, []Flag, bool, error) {
+	var flags = make([]Flag, 0)
+	var foundNewline bool
+	var err error
 
-	source, foundEqual = trashUntil(strings.TrimSpace(source), "=", true)
-	if !foundEqual {
-		log.Printf(`Expected "=" after %q.\n`, Name)
-		return source, "", foundEqual
-	}
+	cgText, foundNewline = trimLeftCheckNewline(cgText)
 
-	source = strings.TrimSpace(source)
+	for strings.HasPrefix(cgText, "--") {
 
-	var idx = 0
+		cgText = cgText[2:] // strip away the "--"
 
-	if source[0] == '"' || source[0] == '\'' {
-		idx = strings.IndexByte(source[1:], source[0])
-		if idx == -1 {
-			return source, "", false // Expected closing quote
-		} else {
-			idx += 1 // Because we started searching on the second character
+		var f Flag
+
+		if cgText, f.Name, err = getFlagWord(cgText); err != nil {
+			return cgText, flags, foundNewline, err
 		}
-		return source[idx+1:], source[1:idx], foundEqual
-	} else { // Get unquoted value
-		for _, r := range source {
-			if unicode.IsSpace(r) {
-				break
+
+		cgText, foundNewline = trimLeftCheckNewline(cgText)
+
+		if strings.HasPrefix(cgText, "=") {
+			f.FoundEqual = true
+
+			if foundNewline {
+				return cgText, flags, foundNewline, fmt.Errorf("Invalid line break before '='")
 			}
-			idx += utf8.RuneLen(r)
+
+			cgText = cgText[1:] // Strip away the `=`
+
+			cgText, foundNewline = trimLeftCheckNewline(cgText)
+			if foundNewline {
+				return cgText, flags, foundNewline, fmt.Errorf("Invalid line break after '='")
+			}
+
+			if len(cgText) == 0 {
+				return cgText, flags, false, fmt.Errorf("Expected value after '='")
+			}
+
+			if cgText[0] == '"' || cgText[0] == '\'' {
+				var idx = strings.IndexByte(cgText[1:], cgText[0])
+
+				if idx == -1 {
+					return cgText, flags, false, fmt.Errorf("Missing closing quote")
+				}
+				idx += 1 // Because we started searching on the second character
+
+				f.Value, cgText = cgText[1:idx], cgText[idx+1:]
+
+			} else { // Get unquoted value
+				var idx = 0
+				for _, r := range cgText {
+					if unicode.IsSpace(r) {
+						break
+					}
+					idx += utf8.RuneLen(r)
+				}
+				f.Value, cgText = cgText[0:idx], cgText[idx:]
+			}
+
+			cgText, foundNewline = trimLeftCheckNewline(cgText)
 		}
-		return source[idx:], source[0:idx], foundEqual
+
+		flags = append(flags, f)
 	}
-}
 
-// Returns an empty string when scanner is complete
-func skipEmptyLines(s *bufio.Scanner) string {
-	for s.Scan() {
-		t := strings.TrimSpace(s.Text())
-
-		if err := s.Err(); err != nil {
-			fmt.Println(err)
-		}
-
-		if len(t) == 0 {
-			continue
-		}
-		return t
-	}
-	return ""
+	return cgText, flags, foundNewline, nil
 }

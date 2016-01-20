@@ -27,7 +27,7 @@ Top of your source (below imports):
 Enum descriptor syntax in your source to create an enum named `Animal` that has 3 variants:
 ``` go
 /*
-@enum --name=Animal --json=string
+@enum Animal --json=string
 Dog --string=doggie --description="Your best friend, and you know it."
 Cat --string=kitty --description="Your best friend, but doesn't always show it."
 Horse --string=horsie --description="Everyone loves horses."
@@ -145,50 +145,46 @@ Notice that there's no space after the `//` and before `go:`. This is required f
 
 The actual Enum descriptors are defined entirely in code comment blocks at the top-level namespace of your code. A comment block is either a `/* multi line comment */` or several adjacent `// single line comments`.
 
-The comment block must begin with `@enum` *(comment lines that are empty or have only whitespace are ignored)* and multiple enum descriptors may be defined in a single comment block, where `@enum` at the beginning of a line marks the start of a new enum.
+The comment block must begin with `@enum` *(comment lines that are empty or have only whitespace are ignored)* followed by an identifier, which provides the name that will be used to reference your enum as well as the type of the variants *(to which the word "Enum" will be added)*.
+
+Multiple enum descriptors may be defined in a single comment block, where `@enum` at the beginning of a line marks the start of a new enum.
 
 The beginning of a descriptor can look like either of these *(incomplete)* examples:
 
 ``` go
 /*
-@enum
+@enum Animal
 */
 ```
 ``` go
 //
-// @enum
+// @enum Animal
 ```
 
-Notice that both have an empty line above the `@enum`. This is fine since empty or whitespace-only comment lines are ignored.
+In both cases we define an enum named `Animal`. This will create a `var Animal`, a `type AnimalEnum struct {...}` and a `var AnimalValues` in the generated file, so all these names must be available to avoid conflicts and must be a valid identifier. As usual, the capitalization will determine whether or not the items are exported, so `animal` could be used instead.
+
+Notice that both have an empty line above the `@enum Animal`. This is fine since empty or whitespace-only comment lines are ignored.
 
 #####*Descriptor flags*
 
-The next thing to come after the `@enum` are the descriptor flags. These flags begin with `--` and are followed by a word and in some cases a `=` with a value. Flags must be separated by at least 1 white space, and can span multiple lines. They can also begin directly after the `@enum` on the same line.
-
-There's always at least one flag required. That's the `--name` flag. This provides the name that will be used to reference your enum as well as the type of the variants *(to which the word "Enum" will be added)*.
-
-So adding the `name` flag, our *(still incomplete)* examples now look like this:
+The next thing to come are the descriptor flags. These flags begin with `--` and are followed by a word and in some cases a `=` with a value. Flags must be separated by at least 1 white space, and can optionally be defined on separate lines.
 
 ``` go
 /*
-@enum --name=Animal
+@enum Animal --json="string"
 */
 ```
 ``` go
 //
-// @enum
-// --name="Animal"
+// @enum Animal
+// --json=string
 ```
 
-In both cases we define an enum named `Animal`. This will create a `var Animal` in the generated file, a `type AnimalEnum struct {...}` and a `var AnimalValues`, so all these names must be available.
-
 Notice two differences in the above examples.
- - The first one uses quotes around `Animal`, and the second does not. As long as a flag value does not contain space characters, the quotation marks are optional.
+ - The first one uses quotes around `string`, and the second does not. As long as a flag value does not contain space characters, the quotation marks are optional.
  - The first one begins its flags on the same line as the `@enum`, and the second starts on the next line. Either way is valid.
 
-Because the `--name` is used as identifiers in code, the name must be a valid identifier. As usual, the capitalization will determine whether or not the items are exported.
-
-The rest of the flags are optional, and are described in the table below.
+All flags are optional, and are described in the table below.
 
 #####*Variant definitions*
 
@@ -227,7 +223,6 @@ These are the flags available for use in the main `@enum` descriptor. They are d
 
 | Flag | Value | Behavior |
 | :--: | ----- | -------- |
-| `name` | Any valid Go identifier | Required. The name of the enum, it's used as the name (or part of the name) of the generated identifiers. |
 | `bitflags` | *(no value)* | Causes the numeric values generated to able to be used as bitflags. When used, a maximum of 64 variants is allowed. |
 | `bitflag_separator` | Any non-empty string of text. | Only valid when `--bitflags` is used. Defines the separator used when the `.String()` method is called on values that have multiple bits set, as well as when `string` is used for JSON/XML marshaling and/or unmarshaling. Default value is `,`. |
 | `iterator_name` | Any valid Go identifier | Alternate identifier name used for the array of variants generated. Used to resolve conflicts. The default name is `Values` |
