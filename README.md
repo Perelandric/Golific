@@ -167,7 +167,7 @@ Notice that both have an empty line above the `@enum Animal`. This is fine since
 
 #####*Descriptor flags*
 
-The next thing to come are the descriptor flags. These flags begin with `--` and are followed by a word and in some cases a `=` with a value. Flags must be separated by at least 1 white space, and can optionally be defined on separate lines.
+The next thing to come are the descriptor flags. These flags begin with `--` and are followed by a word and in some cases a `=` with a value. Flags must be separated by at least 1 white space, and can optionally be defined on separate lines as seen in these *(still incomplete)* examples.
 
 ``` go
 /*
@@ -196,7 +196,7 @@ Adding to the examples above, they may now look like this:
 
 ``` go
 /*
-@enum Animal
+@enum Animal --json="string"
 Dog --string=doggie --description="Your best friend, and you know it."
 Cat --string=kitty --description="Your best friend, but doesn't always show it."
 Horse --string=horsie --description="Everyone loves horses."
@@ -206,6 +206,7 @@ Horse --string=horsie --description="Everyone loves horses."
 //
 // @enum
 // "Animal"
+// --json=string
 // Dog --string=doggie --description="Your best friend, and you know it."
 // Cat --string=kitty --description="Your best friend, but doesn't always show it."
 // Horse --string=horsie --description="Everyone loves horses."
