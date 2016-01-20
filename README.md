@@ -223,19 +223,28 @@ The rest of the documentation will use the multi-line version of our descriptor 
 
 *All Descriptor flags*
 
-These are the flags available for use in the main `@enum` descriptor. These are distinct from the field flags, which are listed later.
-
-All flags are optional, except for the `--name` flag. 
+These are the flags available for use in the main `@enum` descriptor. These are distinct from the variant flags, which are listed later. All flags are optional, except for the `--name` flag.
 
 | Flag | Value | Behavior |
 | :--: | ----- | -------- |
 | `--name` | Any valid Go identifier | Required. The name of the enum, it's used as the name (or part of the name) of the generated identifiers. |
 | `--bitflags` | *(no value)* | Causes the numeric values generated to able to be used as bitflags. When used, a maximum of 64 variants is allowed. |
-| `--bitflag_separator` | At least 1 character value. Default is "," | Only valid when `--bitflags` is used. Defines the separator used when the `.String()` method is called on values that have multiple bits set, as well as when `string` is used for JSON/XML marshaling and/or unmarshaling. |
+| `--bitflag_separator` | Any non-empty string of text. | Only valid when `--bitflags` is used. Defines the separator used when the `.String()` method is called on values that have multiple bits set, as well as when `string` is used for JSON/XML marshaling and/or unmarshaling. Default value is `,`. |
 | `--iterator_name` | Any valid Go identifier | Alternate identifier name used for the array of variants generated. Used to resolve conflicts. The default name is `Values` |
-| `--json` | Allowed values: "string" or "value" | Sets the type of marshaler and unmarshaler to use for JSON. The `string` option will use the `.String()` representation of the variant, whereas the `number` will use the numeric value. |
-| `--xml` | Allowed values: "string" or "value" | Sets the type of marshaler and unmarshaler to use for XML. The `string` option will use the `.String()` representation of the variant, whereas the `number` will use the numeric value. |
-| `--json_marshal` | Allowed values: "string" or "value" | Same as the `--json` flag but only sets the marshaler. |
-| `--json_unmarshal` | Allowed values: "string" or "value" | Same as the `--json` flag but only sets the unmarshaler. |
-| `--xml_marshal` | Allowed values: "string" or "value" | Same as the `--xml` flag but only sets the marshaler. |
-| `--xml_unmarshal` | Allowed values: "string" or "value" | Same as the `--xml` flag but only sets the unmarshaler. |
+| `--json` | Allowed values: `string` or `value` | Sets the type of marshaler and unmarshaler to use for JSON. The `string` option will use the `.String()` representation of the variant, whereas the `number` will use the numeric value. |
+| `--xml` | Allowed values: `string` or `value` | Sets the type of marshaler and unmarshaler to use for XML. The `string` option will use the `.String()` representation of the variant, whereas the `number` will use the numeric value. |
+| `--json_marshal` | Allowed values: `string` or `value` | Same as the `--json` flag but only sets the marshaler. |
+| `--json_unmarshal` | Allowed values: `string` or `value` | Same as the `--json` flag but only sets the unmarshaler. |
+| `--xml_marshal` | Allowed values: `string` or `value` | Same as the `--xml` flag but only sets the marshaler. |
+| `--xml_unmarshal` | Allowed values: `string` or `value` | Same as the `--xml` flag but only sets the unmarshaler. |
+
+
+*All Variant flags*
+
+These are the flags available for use in each variant. All of the flags are optional.
+
+| Flag | Value | Behavior |
+| :--: | ----- | -------- |
+| `--string` | Any string of text. | This sets the the value returned by the `.String()` method. If empty, the variant name is used. |
+| `--description` | Any string of text. | This sets the value returned by the `.Description()` method. If empty, the `--string` value is used. |
+| `--value` | Any integer >= 0 | This overrides the default numeric value of the variant. It may *not* be used when `--bitflags` is used. The value must not have been already assigned to another variant. |
