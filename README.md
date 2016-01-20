@@ -196,7 +196,7 @@ Adding to the examples above, they may now look like this:
 
 ``` go
 /*
-@enum --name=Animal
+@enum Animal
 Dog --string=doggie --description="Your best friend, and you know it."
 Cat --string=kitty --description="Your best friend, but doesn't always show it."
 Horse --string=horsie --description="Everyone loves horses."
@@ -205,7 +205,7 @@ Horse --string=horsie --description="Everyone loves horses."
 ``` go
 //
 // @enum
-// --name="Animal"
+// "Animal"
 // Dog --string=doggie --description="Your best friend, and you know it."
 // Cat --string=kitty --description="Your best friend, but doesn't always show it."
 // Horse --string=horsie --description="Everyone loves horses."
@@ -219,7 +219,7 @@ The rest of the documentation will use the multi-line version of our descriptor 
 
 ###Descriptor flags
 
-These are the flags available for use in the main `@enum` descriptor. They are distinct from the variant flags, which are listed in a separate table. All flags are optional, except for the `--name` flag.
+These are the flags available for use in the main `@enum` descriptor. They are distinct from the variant flags, which are listed in a separate table. All of the flags are optional.
 
 | Flag | Value | Behavior |
 | :--: | ----- | -------- |
