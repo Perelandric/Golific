@@ -244,6 +244,10 @@ func (self *EnumRepr) setFlags(flags string) bool {
 			if flags, self.FlagSep, foundEqual = getValue(Name, flags); !foundEqual {
 				return false
 			}
+			if self.FlagSep == "" {
+				log.Println("`--flag_separator` must have at least one character")
+				return false
+			}
 
 		case "iterator_name": // Custom Name for Array of values
 			if flags, self.iterName, foundEqual = getValue(Name, flags); !foundEqual {
