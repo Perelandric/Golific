@@ -247,4 +247,4 @@ These are the flags available for use in each variant. All of the flags are opti
 | :--: | ----- | -------- |
 | `--string` | Any string of text. | This sets the the value returned by the `.String()` method. If empty, the variant name is used. |
 | `--description` | Any string of text. | This sets the value returned by the `.Description()` method. If empty, the `--string` value is used. |
-| `--value` | Any integer >= 0 | This overrides the default numeric value of the variant. It may *not* be used when `--bitflags` is used. The value must not have been already assigned to another variant. |
+| `--value` | Any integer >= 0 | This overrides the default numeric value of the variant. It may *not* be used when `--bitflags` is used. The value must not have been already assigned to another variant. The value `0` should only be used for a variant that makes sense to use as a default value. |
