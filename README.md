@@ -63,13 +63,13 @@ for _, animal := range AnimalValues {
 ```
 
 # FAQ
-*General*
+###General
  - **Why was this created?**
   - Primarily in order to achieve greater type safety by restricting values of an enum type to only those variants provided.
  - **Can't this be done with `const` and a type alias?**
   - Yes, however a value of the base type can be substituted accidentally, resulting in bugs. Also, using `consts` pollutes the variable namespace, which can be an issue when overlapping names are needed in different categories.
 
-*Functionality*
+###Functionality
  - **How are the variants stored and referenced?**
   - For each enum, the variants are stored together in an anonymous struct value assigned to a variable. They are referenced as `Animal.Dog`.
  - **How do I access the numeric representation of a variant?**
@@ -89,7 +89,7 @@ for _, animal := range AnimalValues {
  - **Can I enumerate the variants of an enum using a `range` loop?**
   - Yes, an array holding the variants is generated, which can be used in a `range` loop.
 
-*Efficiency*
+###Efficiency
  - **How are the variants represented in memory?**
   - The individual variants are stored as a value of a struct type that has a single `uint` field, sized to the smallest size needed for each given enum.
  - **Does each variant being a struct value add extra memory overhead?**
@@ -101,7 +101,7 @@ for _, animal := range AnimalValues {
  - **Does GoEnum use interfaces or pointers as the type of its variants?**
   - No, the `type` of the variants is a concrete, value type. Assigning or passing makes a copy, which equals the specific size of the `uint` used for that enum.
 
-*Safety*
+###Safety
  - **Is it still possible to use a value of the base (struct) type in place of one of the variants?**
   - Technically yes, however the variants for each enum use a struct type with a `value` field that has a unique identifier appended to it, i.e. `value_1cn7iw6qxr8ad`, so substituting a base value would be cumbersome and never accidental.
  - **Are the new unique identifiers used in the variants' structs generated every time `generate` is run?**
@@ -111,7 +111,7 @@ for _, animal := range AnimalValues {
 
 # Documentation
 
-*Installation*
+###Installation
 
 To install GoEnum, use the `install` command from the Go toolchain.
 
@@ -119,7 +119,7 @@ To install GoEnum, use the `install` command from the Go toolchain.
 go install github.com/Perelandric/GoEnum
 ```
 
-*Using the `generate` command*
+###Using the `generate` command
 
 After your source code has been properly annotated as described below, then from your source directory run the `generate` command.
 
@@ -131,7 +131,7 @@ This creates a new file for every file that had the proper annotations. The new 
 
 Do not edit the generated file, as it will be overwritten every time you call `generate`.
 
-*Annotations*
+###Setup for the `generate` command
 
 As with all files that rely on Go's `generate` command, your file must have the `go:generate` directive below the file package name and imports. For GoEnum, it should look like this:
 
@@ -141,15 +141,13 @@ As with all files that rely on Go's `generate` command, your file must have the 
 
 Notice that there's no space after the `//` and before `go:`. This is required for the `generate` tool.
 
-*Enum descriptors*
+###Enum descriptor syntax
 
-The actual Enum descriptors are defined entirely in code comment blocks at the top-level namespace of your code.
+The actual Enum descriptors are defined entirely in code comment blocks at the top-level namespace of your code. A comment block is either a `/* multi line comment */` or several adjacent `// single line comments`.
 
-It doesn't matter if you use multiple single-line or multi-line comment, as long as the comment begins with `@enum`. *(Comment lines that are empty or have only whitespace are ignored.)* If using multiple single-line comments, any non-comment line marks the end of the block.
+The comment block must begin with `@enum` *(comment lines that are empty or have only whitespace are ignored)* and multiple enum descriptors may be defined in a single comment block, where `@enum` at the beginning of a line marks the start of a new enum.
 
-Multiple `@enum` descriptors may be defined in a single comment block.
-
-The beginning of an descriptor can look like either of these *(incomplete)* examples:
+The beginning of a descriptor can look like either of these *(incomplete)* examples:
 
 ``` go
 /*
@@ -163,7 +161,7 @@ The beginning of an descriptor can look like either of these *(incomplete)* exam
 
 Notice that both have an empty line above the `@enum`. This is fine since empty or whitespace-only comment lines are ignored.
 
-*Descriptor flags*
+#####*Descriptor flags*
 
 The next thing to come after the `@enum` are the descriptor flags. These flags begin with `--` and are followed by a word and in some cases a `=` with a value. Flags must be separated by at least 1 white space, and can span multiple lines. They can also begin directly after the `@enum` on the same line.
 
@@ -192,9 +190,9 @@ Because the `--name` is used as identifiers in code, the name must be a valid id
 
 The rest of the flags are optional, and are described in the table below.
 
-*Variant definitions*
+#####*Variant definitions*
 
-After all the descriptor flags have been defined, you'll need to define the enum variants. At least one variant is required per enum.
+After the descriptor flags have been defined, you'll need to define the enum variants. At least one variant is required per enum.
 
 Each variant must be entirely defined on its own line. Lines that are long because of variant flags must not be split across multiple lines.
 
@@ -221,30 +219,34 @@ So our examples are now fully valid enum descriptors. As long as you have the `g
 
 The rest of the documentation will use the multi-line version of our descriptor example.
 
-*All Descriptor flags*
+#Flags and Methods
 
-These are the flags available for use in the main `@enum` descriptor. These are distinct from the variant flags, which are listed later. All flags are optional, except for the `--name` flag.
+###Descriptor flags
+
+These are the flags available for use in the main `@enum` descriptor. They are distinct from the variant flags, which are listed in a separate table. All flags are optional, except for the `--name` flag.
 
 | Flag | Value | Behavior |
 | :--: | ----- | -------- |
-| `--name` | Any valid Go identifier | Required. The name of the enum, it's used as the name (or part of the name) of the generated identifiers. |
-| `--bitflags` | *(no value)* | Causes the numeric values generated to able to be used as bitflags. When used, a maximum of 64 variants is allowed. |
-| `--bitflag_separator` | Any non-empty string of text. | Only valid when `--bitflags` is used. Defines the separator used when the `.String()` method is called on values that have multiple bits set, as well as when `string` is used for JSON/XML marshaling and/or unmarshaling. Default value is `,`. |
-| `--iterator_name` | Any valid Go identifier | Alternate identifier name used for the array of variants generated. Used to resolve conflicts. The default name is `Values` |
-| `--json` | Allowed values: `string` or `value` | Sets the type of marshaler and unmarshaler to use for JSON. The `string` option will use the `.String()` representation of the variant, whereas the `number` will use the numeric value. |
-| `--xml` | Allowed values: `string` or `value` | Sets the type of marshaler and unmarshaler to use for XML. The `string` option will use the `.String()` representation of the variant, whereas the `number` will use the numeric value. |
-| `--json_marshal` | Allowed values: `string` or `value` | Same as the `--json` flag but only sets the marshaler. |
-| `--json_unmarshal` | Allowed values: `string` or `value` | Same as the `--json` flag but only sets the unmarshaler. |
-| `--xml_marshal` | Allowed values: `string` or `value` | Same as the `--xml` flag but only sets the marshaler. |
-| `--xml_unmarshal` | Allowed values: `string` or `value` | Same as the `--xml` flag but only sets the unmarshaler. |
+| `name` | Any valid Go identifier | Required. The name of the enum, it's used as the name (or part of the name) of the generated identifiers. |
+| `bitflags` | *(no value)* | Causes the numeric values generated to able to be used as bitflags. When used, a maximum of 64 variants is allowed. |
+| `bitflag_separator` | Any non-empty string of text. | Only valid when `--bitflags` is used. Defines the separator used when the `.String()` method is called on values that have multiple bits set, as well as when `string` is used for JSON/XML marshaling and/or unmarshaling. Default value is `,`. |
+| `iterator_name` | Any valid Go identifier | Alternate identifier name used for the array of variants generated. Used to resolve conflicts. The default name is `Values` |
+| `json` | Allowed values: `string` or `value` | Sets the type of marshaler and unmarshaler to use for JSON. The `string` option will use the `.String()` representation of the variant, whereas the `number` will use the numeric value. |
+| `xml` | Allowed values: `string` or `value` | Sets the type of marshaler and unmarshaler to use for XML. The `string` option will use the `.String()` representation of the variant, whereas the `number` will use the numeric value. |
+| `json_marshal` | Allowed values: `string` or `value` | Same as the `--json` flag but only sets the marshaler. |
+| `json_unmarshal` | Allowed values: `string` or `value` | Same as the `--json` flag but only sets the unmarshaler. |
+| `xml_marshal` | Allowed values: `string` or `value` | Same as the `--xml` flag but only sets the marshaler. |
+| `xml_unmarshal` | Allowed values: `string` or `value` | Same as the `--xml` flag but only sets the unmarshaler. |
 
 
-*All Variant flags*
+###Variant flags
 
 These are the flags available for use in each variant. All of the flags are optional.
 
 | Flag | Value | Behavior |
 | :--: | ----- | -------- |
-| `--string` | Any string of text. | This sets the the value returned by the `.String()` method. If empty, the variant name is used. |
-| `--description` | Any string of text. | This sets the value returned by the `.Description()` method. If empty, the `--string` value is used. |
-| `--value` | Any integer >= 0 | This overrides the default numeric value of the variant. It may *not* be used when `--bitflags` is used. The value must not have been already assigned to another variant. The value `0` should only be used for a variant that makes sense to use as a default value. |
+| `string` | Any string of text. | This sets the the value returned by the `.String()` method. If empty, the variant name is used. |
+| `description` | Any string of text. | This sets the value returned by the `.Description()` method. If empty, the `--string` value is used. |
+| `value` | Any integer >= 0 | This overrides the default numeric value of the variant. It may *not* be used when `--bitflags` is used. The value must not have been already assigned to another variant. The value `0` should only be used for a variant that makes sense to use as a default value. |
+
+###*Methods*
