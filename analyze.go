@@ -262,25 +262,25 @@ func (self *EnumRepr) setFlags(flags string) bool {
 			}
 			self.setMarshalingFlags(Name, value, xmlMarshalIsString|xmlUnmarshalIsString)
 
-		case "json_marshaler": // Set type of JSON marshaler
+		case "json_marshal": // Set type of JSON marshaler
 			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
 				return false
 			}
 			self.setMarshalingFlags(Name, value, jsonMarshalIsString)
 
-		case "json_unmarshaler": // Set type of JSON unmarshaler
+		case "json_unmarshal": // Set type of JSON unmarshaler
 			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
 				return false
 			}
 			self.setMarshalingFlags(Name, value, jsonUnmarshalIsString)
 
-		case "xml_marshaler": // Set type of XML marshaler
+		case "xml_marshal": // Set type of XML marshaler
 			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
 				return false
 			}
 			self.setMarshalingFlags(Name, value, xmlMarshalIsString)
 
-		case "xml_unmarshaler": // Set type of XML unmarshaler
+		case "xml_unmarshal": // Set type of XML unmarshaler
 			if flags, value, foundEqual = getValue(Name, flags); !foundEqual {
 				return false
 			}
