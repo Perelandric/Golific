@@ -134,6 +134,7 @@ func (self *EnumData) doComment(cg *ast.CommentGroup) {
 	}
 
 	var err error
+	var name string
 
 	for {
 		cgText = strings.TrimSpace(cgText)
@@ -145,8 +146,12 @@ func (self *EnumData) doComment(cg *ast.CommentGroup) {
 
 		cgText = cgText[5:] // Strip away the `@enum`
 
-		if cgText, err = self.doEnum(cgText); err != nil {
-			log.Println(err)
+		if cgText, name, err = self.doEnum(cgText); err != nil {
+			if len(name) > 0 {
+				log.Printf("%s: %s\n", name, err)
+			} else {
+				log.Println(err)
+			}
 
 			if idx := strings.Index(cgText, "@enum"); idx == -1 {
 				break
@@ -157,25 +162,25 @@ func (self *EnumData) doComment(cg *ast.CommentGroup) {
 	}
 }
 
-func (self *EnumData) doEnum(cgText string) (string, error) {
+func (self *EnumData) doEnum(cgText string) (string, string, error) {
 	var enum EnumRepr
 	var err error
 
 	if cgText, enum.Name, err = getIdent(strings.TrimSpace(cgText)); err != nil {
-		return cgText, err
+		return cgText, enum.Name, err
 	}
 
 	if cgText, err = enum.gatherFlags(cgText); err != nil {
-		return cgText, err
+		return cgText, enum.Name, err
 	}
 
 	if cgText, err = enum.doFields(cgText); err != nil {
-		return cgText, err
+		return cgText, enum.Name, err
 	}
 
 	self.Reprs = append(self.Reprs, &enum)
 
-	return cgText, nil
+	return cgText, enum.Name, nil
 }
 
 func (self *EnumRepr) doFields(cgText string) (_ string, err error) {
