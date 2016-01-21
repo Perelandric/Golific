@@ -76,8 +76,8 @@ for _, animal := range Animal.Values {
   - Yes, the `.Name()` method gives you the name and the `.String()` method gives you an optional custom string defined using the `--string` flag.
  - **Can meta data be associated with each variant?**
   - Yes, each variant can have a description assigned using the `--description` flag, which is accessed using the `.Description()` method.
- - **Can I have JSON (TODO: and XML) marshaled to and unmarshaled from the string value instead of the number?**
-  - Yes, using the `--json` and `--xml` flags. There are also flags to set specifically JSON or XML marshaling/unmarshaling, though you'll get a warning if the marshaler doesn't match the unmarshaler.
+ - **Can I have JSON <!--and XML -->marshaled to and unmarshaled from the string value instead of the number?**
+  - Yes, using the `--json` <!--and `--xml`--> flag<!--s-->. There are also flags to set specifically JSON <!--or XML -->marshaling/unmarshaling, though you'll get a warning if the marshaler doesn't match the unmarshaler.
  - **Can I enumerate the variants of an enum using a `range` loop?**
   - Yes, an array holding the variants is generated, which can be used in a `range` loop.
 
@@ -217,16 +217,16 @@ These are the flags available for use in the main `@enum` descriptor. They are d
 | Flag | Value | Behavior |
 | :--: | ----- | -------- |
 | `bitflags` | *(no value)* | Causes the numeric values generated to able to be used as bitflags. When used, a maximum of 64 variants is allowed. |
-| `bitflag_separator` | Any non-empty string of text. | Only valid when `--bitflags` is used. Defines the separator used when the `.String()` method is called on values that have multiple bits set, as well as when `string` is used for JSON/XML marshaling and/or unmarshaling. Default value is `,`. |
+| `bitflag_separator` | Any non-empty string of text. | Only valid when `--bitflags` is used. Defines the separator used when the `.String()` method is called on values that have multiple bits set, as well as when `string` is used for JSON<!--/XML--> marshaling and/or unmarshaling. Default value is `,`. |
 | `iterator_name` | Any valid Go identifier | Alternate identifier name used for the array of variants generated. Used to resolve conflicts. The default name is `Values` |
 | `json` | Allowed values: `string` or `value` | Sets the type of marshaler and unmarshaler to use for JSON. The `string` option will use the `.String()` representation of the variant, whereas the `number` will use the numeric value. |
-| `xml` | Allowed values: `string` or `value` | Sets the type of marshaler and unmarshaler to use for XML. The `string` option will use the `.String()` representation of the variant, whereas the `number` will use the numeric value. |
+<!--| `xml` | Allowed values: `string` or `value` | Sets the type of marshaler and unmarshaler to use for XML. The `string` option will use the `.String()` representation of the variant, whereas the `number` will use the numeric value. |-->
 | `json_marshal` | Allowed values: `string` or `value` | Same as the `--json` flag but only sets the marshaler. |
 | `json_unmarshal` | Allowed values: `string` or `value` | Same as the `--json` flag but only sets the unmarshaler. |
-| `xml_marshal` | Allowed values: `string` or `value` | Same as the `--xml` flag but only sets the marshaler. |
-| `xml_unmarshal` | Allowed values: `string` or `value` | Same as the `--xml` flag but only sets the unmarshaler. |
+<!--| `xml_marshal` | Allowed values: `string` or `value` | Same as the `--xml` flag but only sets the marshaler. |
+| `xml_unmarshal` | Allowed values: `string` or `value` | Same as the `--xml` flag but only sets the unmarshaler. |-->
 | `drop_json` | *(no value)* | Prevent JSON marshaling methods from being generated. |
-| `drop_xml` | *(no value)* | Prevent XML marshaling methods from being generated. |
+<!--| `drop_xml` | *(no value)* | Prevent XML marshaling methods from being generated. |-->
 
 
 ###Variant flags
