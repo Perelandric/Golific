@@ -259,8 +259,8 @@ These are the flags available for use in each variant. All of the flags are opti
 
 `func IntValue() int` - Same as `Value()`, except that the value is cast to an `int`.
 
-###Variant Methods (for bitflag enums)
+#####*Methods for bitflag enums*
 
-*The methods in this section are only generated when the enum uses the `--bitflags` option.*
+*The methods below are only generated when the enum uses the `--bitflags` option.*
 
 *Coming soon...*
