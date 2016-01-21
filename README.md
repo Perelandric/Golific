@@ -62,15 +62,15 @@ for _, animal := range Animal.Values {
  - **Why was this created?**
   - Primarily in order to achieve greater type safety by restricting values of an enum type to only those variants provided.
  - **Can't this be done with `const` and a type alias?**
-  - Yes, however a value of the base type can be substituted accidentally, resulting in bugs. Also, using `consts` pollutes the variable namespace, which can be an issue when overlapping names are needed in different categories.
+  - Yes, however a value of the base type can be substituted accidentally, resulting in bugs. Also, using `const` pollutes the variable namespace, which can be an issue when overlapping names are needed in different categories.
 
 ###Functionality
  - **How are the variants stored and referenced?**
   - For each enum, the variants are stored together in an anonymous struct value assigned to a variable. They are referenced as `Animal.Dog`.
  - **Can I get the numeric representation of a variant?**
-  - Use the `.Value()` or `.IntValue()` method.
+  - Yes, by using the `.Value()` or `.IntValue()` method.
  - **Will GoEnum generate bitflag numbers for me?**
-  - Yes, using the `--bitflags` flag.
+  - Yes, by using the `--bitflags` flag.
  - **Can I choose the numeric representation?**
   - Yes, as long as the `--bitflags` option is not used, and the number doesn't match another value in the same enum.
  - **Can negative numbers be used for the numeric representation?**
@@ -88,7 +88,7 @@ for _, animal := range Animal.Values {
  - **How are the variants represented in memory?**
   - The individual variants are stored as a value of a struct type that has a single `uint` field, sized to the smallest size needed for each given enum.
  - **Does each variant being a struct value add extra memory overhead?**
-  - No, variants that use a `uint8` will still use only 8 bits.
+  - No, variants that, for example, use a `uint8`, will still use only 8 bits.
  - **Does the `.Value()` call add overhead when getting the underlying number?**
   - Only if the compiler does not inline the call. However, the method simply returns the value of the field, so it would seem about as likely a candidate for inlining as one can hope to find.
  - **Does GoEnum use reflection?**
@@ -98,7 +98,7 @@ for _, animal := range Animal.Values {
 
 ###Safety
  - **Is it still possible to use a value of the base (struct) type in place of one of the variants?**
-  - Technically yes, however the variants for each enum use a struct type with a `value` field that has a unique identifier appended to it, i.e. `value_1cn7iw6qxr8ad`, so substituting a base value would be cumbersome and never accidental.
+  - Technically yes, however the variants for each enum use a struct type with a `value` field that has a unique identifier appended to it, e.g. `value_1cn7iw6qxr8ad`, so substituting a base value would be cumbersome and never accidental.
  - **Are the new unique identifiers used in the variants' structs generated every time `generate` is run?**
   - Yes. A pseudo-random number is used with a time-based seed, so it is non-deterministic.
  - **Is it possible to overwrite one variant with another from the same enum?**
@@ -122,13 +122,13 @@ As with all files that rely on Go's `generate` command, your file must have the 
 //go:generate GoEnum $GOFILE
 ```
 
-Notice that there's no space after the `//` and before `go:`. This is required for the `generate` tool.
+Notice that there's no space between `//` and `go:generate`. This is required for the `generate` tool.
 
 ###Enum descriptor syntax
 
-The actual Enum descriptors are defined entirely in code comment blocks at the top-level namespace of your code. A comment block is either a `/* multi line comment */` or several adjacent `// single line comments`.
+The actual Enum descriptors are defined entirely in code comment blocks at the top-level namespace of your code. A comment block is either a `/* multi line comment */` or several adjacent `// single line comments`. Comment lines that are empty or have only whitespace are ignored.
 
-The comment block must begin with `@enum` *(comment lines that are empty or have only whitespace are ignored)* followed by an identifier, which provides the name that will be used to reference your enum as well as the type of the variants *(to which the word "Enum" will be added)*.
+The comment block must begin with `@enum` followed by an identifier, which provides the name that will be used to reference your enum as well as the type of the variants *(to which the word "Enum" will be added)*.
 
 Multiple enum descriptors may be defined in a single comment block, where `@enum` at the beginning of a line marks the start of a new enum.
 
@@ -144,13 +144,13 @@ The beginning of a descriptor can look like either of these *(incomplete)* examp
 // @enum Animal
 ```
 
-In both cases we define an enum named `Animal`. This will create a `var Animal` and a `type AnimalEnum struct {...}` in the generated file, so these names must be available to avoid conflicts and the name you provide must be a valid identifier. As usual, the capitalization will determine whether or not the items are exported, so `animal` could be used instead of `Animal`.
+In both cases we define an enum named `Animal`. This will create a `var Animal` and a `type AnimalEnum struct {...}` in the generated file, so these names must be available to avoid conflicts, and the name you provide must be a valid identifier. As usual, the capitalization determines whether or not the items are exported, so `animal` could be used instead of `Animal`.
 
 Notice that both have an empty line above the `@enum Animal`. This is fine since empty or whitespace-only comment lines are ignored.
 
 #####*Descriptor flags*
 
-The next thing to come is the set of descriptor flags. These flags begin with `--` and are followed by a word and in some cases an `=` with a value. Flags must be separated by at least 1 white space, and can optionally be defined on separate lines as seen in these *(still incomplete)* examples.
+Next is the set of descriptor flags. These flags begin with `--` and are followed by a word and in some cases an `=` with a value. Flags must be separated by at least 1 white space, and can optionally be defined on separate lines as seen in these *(still incomplete)* examples.
 
 ``` go
 /*
@@ -164,7 +164,7 @@ The next thing to come is the set of descriptor flags. These flags begin with `-
 ```
 
 Notice two differences in the above examples.
- - The first one uses quotes around `string`, and the second does not. As long as a flag value does not contain space characters, the quotation marks are optional.
+ - The first one uses quotes around `string`, and the second does not. As long as the value does not contain space characters, the quotation marks are optional.
  - The first one begins its flags on the same line as the `@enum`, and the second starts on the next line. Either way is valid.
 
 All flags are optional, and are described in the tables below.
@@ -185,8 +185,7 @@ Horse --string=horsie --description="Everyone loves horses."
 ```
 ``` go
 //
-// @enum
-// "Animal"
+// @enum Animal
 // --json=string
 // Dog --string=doggie --description="Your best friend, and you know it."
 // Cat --string=kitty --description="Your best friend, but doesn't always show it."
