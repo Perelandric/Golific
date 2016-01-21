@@ -18,6 +18,8 @@ func main() {
 
 	for _, file := range os.Args[1:] {
 		fmt.Printf("Processing file: %q\n", file)
-		data.DoFile(file)
+		if err := data.DoFile(file); err != nil {
+			fmt.Println(err)
+		}
 	}
 }

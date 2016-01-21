@@ -49,7 +49,7 @@ j, err := json.Marshal(&res)
 fmt.Printf("%s %s\n", j, err) // {"Name":"Charlie Brown","Pet":"doggie"} <nil>
 
 // Enumerate all the variants in a range loop
-for _, animal := range AnimalValues {
+for _, animal := range Animal.Values {
  fmt.Printf("Kind: %s, Description: %q\n", animal, animal.Description())
 }
 ```
@@ -208,7 +208,7 @@ So our examples are now fully valid enum descriptors. As long as you have the `g
 
 The rest of the documentation will use the multi-line version of our descriptor example.
 
-#Flags and Methods
+#Flags, Methods and everything else
 
 ###Descriptor flags
 
@@ -258,3 +258,7 @@ The methods described in this section use `MyEnum` as a placeholder name for the
 The methods below are only generated when the enum uses the `--bitflags` option.
 
 *Coming soon...*
+
+#####*Other items*
+
+*Coming soon... (iterator array)*

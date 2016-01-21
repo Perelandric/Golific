@@ -106,7 +106,7 @@ func (self *EnumRepr) JsonUnmarshalIsString() bool {
 
 func (self *EnumRepr) GetIterName() string {
 	if len(self.iterName) == 0 {
-		return self.Name + "Values"
+		return "Values"
 	}
 	return self.iterName
 }
@@ -163,7 +163,10 @@ func (self *EnumData) doComment(cg *ast.CommentGroup) {
 }
 
 func (self *EnumData) doEnum(cgText string) (string, string, error) {
-	var enum EnumRepr
+	var enum = EnumRepr{
+		iterName: "Values",
+	}
+
 	var err error
 
 	if cgText, enum.Name, err = getIdent(strings.TrimSpace(cgText)); err != nil {
@@ -192,6 +195,12 @@ func (self *EnumRepr) doFields(cgText string) (_ string, err error) {
 		cgText, f.Name, err = getIdent(cgText)
 		if err != nil {
 			return cgText, err
+		}
+
+		if f.Name == self.iterName {
+			return cgText,
+				fmt.Errorf("The variant named %q conflicts with the iterator. Use "+
+					"`--iterator_name=SomeOtherIdent` to resolve the conflict.", f.Name)
 		}
 
 		cgText, err = f.gatherFlags(cgText)

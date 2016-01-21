@@ -70,15 +70,19 @@ var {{$repr.Name}} = struct {
 	{{- range $f := .Fields}}
 	{{$f.Name}} {{$variantType}}
 	{{- end}}
+
+	// Used to iterate in range loops
+	{{.GetIterName}} [{{len .Fields}}]{{$variantType}}
 }{
 	{{- range $f := .Fields}}
 	{{$f.Name}}: {{$variantType}}{ {{$uniqField}}: {{$f.Value}} },
 	{{- end}}
 }
 
-// Used to iterate in range loops
-var {{.GetIterName}} = [...]{{$variantType}}{
-	{{range $f := .Fields}} {{$repr.Name}}.{{$f.Name}},{{end}}
+func init() {
+	{{$repr.Name}}.{{.GetIterName}} = [{{len .Fields}}]{{$variantType}}{
+		{{range $f := .Fields}} {{$repr.Name}}.{{$f.Name}},{{end}}
+	}
 }
 
 // Get the integer value of the enum variant
@@ -123,7 +127,7 @@ func ({{$self}} {{$variantType}}) String() string {
 
 	var vals = make([]string, 0, {{len .Fields}}/2)
 
-	for _, item := range {{.GetIterName}} {
+	for _, item := range {{$repr.Name}}.{{.GetIterName}} {
 		if {{$self}}.{{$uniqField}} & item.{{$uniqField}} == item.{{$uniqField}} {
 			vals = append(vals, item.String())
 		}

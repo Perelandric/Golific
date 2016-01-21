@@ -60,7 +60,7 @@ func main() {
 	fmt.Printf("%s\n", jj) // {"Name":"Charlie Brown","Pet":"doggie"}
 
 	// Enumerate all the variants in a range loop
-	for _, animal := range AnimalValues {
+	for _, animal := range Animal.Values {
 		fmt.Printf("Kind: %s, Description: %q\n", animal, animal.Description())
 	}
 }
