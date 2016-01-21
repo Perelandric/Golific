@@ -353,11 +353,11 @@ func (self *EnumRepr) gatherFlags(cgText string) (string, error) {
 	return cgText, nil
 }
 
-func (self *EnumRepr) doBooleanFlag(flag Flag, toSet int) error {
+func (self *EnumRepr) doBooleanFlag(flag Flag, toSet uint) error {
 	if !flag.FoundEqual || flag.Value == "true" {
-		self.flags |= dropJson
+		self.flags |= toSet
 	} else if flag.Value == "false" {
-		self.flags &^= dropJson
+		self.flags &^= toSet
 	} else {
 		return fmt.Errorf("Invalid value %q for %q", flag.Value, flag.Name)
 	}

@@ -34,10 +34,21 @@ func (self *EnumData) generateCode() error {
 	return err
 }
 
-// If any EnumRepr is `bitflag`, `log` is needed
+// If any EnumRepr is `bitflag`, `strings` is needed
 func (self *EnumData) AnyBitflags() bool {
 	for _, repr := range self.Reprs {
 		if repr.flags&bitflags == bitflags {
+			return true
+		}
+	}
+	return false
+}
+
+// If any EnumRepr is includes a JSON unmarshaler, `log` is needed
+func (self *EnumData) AnyUnmarshalString() bool {
+	for _, repr := range self.Reprs {
+		// If we don't dropJson and we are unmarshaling as a string, we need "log"
+		if repr.flags&(dropJson|jsonUnmarshalIsString) == jsonUnmarshalIsString {
 			return true
 		}
 	}
@@ -55,7 +66,7 @@ var tmpl = template.Must(template.New("generate_enum").Parse(
 package {{.Package}}
 
 import (
-	"log"
+	{{if .AnyUnmarshalString}}"log"{{end}}
 	"strconv"
 	{{if .AnyBitflags}}"strings"{{end -}}
 )
@@ -225,7 +236,7 @@ func ({{$self}} *{{$variantType}}) UnmarshalJSON(b []byte) error {
 {{- end}}
 
 {{if $repr.DoXml -}}
-// XML marshaling methods to come
+
 {{- end}}
 
 {{- if .IsBitflag}}
@@ -266,7 +277,7 @@ func ({{$self}} {{$variantType}}) Has(v {{$variantType}}) bool {
 	return {{$self}}.{{$uniqField}}&v.{{$uniqField}} == v.{{$uniqField}}
 }
 
-// HasAny returns 'true' if the receiver contains any of the values of 'v', 
+// HasAny returns 'true' if the receiver contains any of the values of 'v',
 // otherwise 'false'.
 func ({{$self}} {{$variantType}}) HasAny(v ...{{$variantType}}) bool {
 	for _, item := range v {
