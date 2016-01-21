@@ -55,6 +55,8 @@ for _, animal := range Animal.Values {
 }
 ```
 
+**Please note:** This will create a new file with the same name as the original, except that it will have the prefix `enum____` added, so if your file is `animal.go`, the file `enum____animal.go` will be created, ***overwriting*** any existing file.
+
 # FAQ
 ###General
  - **Why was this created?**
@@ -142,13 +144,13 @@ The beginning of a descriptor can look like either of these *(incomplete)* examp
 // @enum Animal
 ```
 
-In both cases we define an enum named `Animal`. This will create a `var Animal`, a `type AnimalEnum struct {...}` and a `var AnimalValues` in the generated file, so all these names must be available to avoid conflicts and must be a valid identifier. As usual, the capitalization will determine whether or not the items are exported, so `animal` could be used instead.
+In both cases we define an enum named `Animal`. This will create a `var Animal` and a `type AnimalEnum struct {...}` in the generated file, so these names must be available to avoid conflicts and the name you provide must be a valid identifier. As usual, the capitalization will determine whether or not the items are exported, so `animal` could be used instead of `Animal`.
 
 Notice that both have an empty line above the `@enum Animal`. This is fine since empty or whitespace-only comment lines are ignored.
 
 #####*Descriptor flags*
 
-The next thing to come are the descriptor flags. These flags begin with `--` and are followed by a word and in some cases a `=` with a value. Flags must be separated by at least 1 white space, and can optionally be defined on separate lines as seen in these *(still incomplete)* examples.
+The next thing to come is the set of descriptor flags. These flags begin with `--` and are followed by a word and in some cases an `=` with a value. Flags must be separated by at least 1 white space, and can optionally be defined on separate lines as seen in these *(still incomplete)* examples.
 
 ``` go
 /*
@@ -165,13 +167,11 @@ Notice two differences in the above examples.
  - The first one uses quotes around `string`, and the second does not. As long as a flag value does not contain space characters, the quotation marks are optional.
  - The first one begins its flags on the same line as the `@enum`, and the second starts on the next line. Either way is valid.
 
-All flags are optional, and are described in the table below.
+All flags are optional, and are described in the tables below.
 
 #####*Variant definitions*
 
-After the descriptor flags have been defined, you'll need to define the enum variants. At least one variant is required per enum.
-
-Each variant must be entirely defined on its own line. Lines that are long because of variant flags must not be split across multiple lines.
+After the descriptor flags have been defined, you'll need to define the enum variants. At least one variant is required per enum. Again, the flags may be defined on the same line or on different lines.
 
 Adding to the examples above, they may now look like this:
 
@@ -193,7 +193,7 @@ Horse --string=horsie --description="Everyone loves horses."
 // Horse --string=horsie --description="Everyone loves horses."
 ```
 
-So our examples are now fully valid enum descriptors. As long as you have the `go:generate` annotation previously defined, you'll be able to run `go generate` and your new source file will be generated.
+So our examples are now fully valid enum descriptors.
 
 ###Using the `generate` command
 
