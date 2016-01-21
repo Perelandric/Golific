@@ -214,9 +214,11 @@ The rest of the documentation will use the multi-line version of our descriptor 
 
 These are the flags available for use in the main `@enum` descriptor. They are distinct from the variant flags, which are listed in a separate table. All of the flags are optional.
 
+The *boolean* in the **Value** column means the allowed values are `true` or `false`, or if no equal sign and value is provide, it will be considered to be `true`.
+
 | Flag | Value | Behavior |
 | :--: | ----- | -------- |
-| `bitflags` | *(no value)* | Causes the numeric values generated to able to be used as bitflags. When used, a maximum of 64 variants is allowed. |
+| `bitflags` | *boolean* | Causes the numeric values generated to able to be used as bitflags. When used, a maximum of 64 variants is allowed. |
 | `bitflag_separator` | Any non-empty string of text. | Only valid when `--bitflags` is used. Defines the separator used when the `.String()` method is called on values that have multiple bits set, as well as when `string` is used for JSON<!--/XML--> marshaling and/or unmarshaling. Default value is `,`. |
 | `iterator_name` | Any valid Go identifier | Alternate identifier name used for the array of variants generated. Used to resolve conflicts. The default name is `Values` |
 | `json` | Allowed values: `string` or `value` | Sets the type of marshaler and unmarshaler to use for JSON. The `string` option will use the `.String()` representation of the variant, whereas the `number` will use the numeric value. |
@@ -225,8 +227,8 @@ These are the flags available for use in the main `@enum` descriptor. They are d
 | `json_unmarshal` | Allowed values: `string` or `value` | Same as the `--json` flag but only sets the unmarshaler. |
 <!--| `xml_marshal` | Allowed values: `string` or `value` | Same as the `--xml` flag but only sets the marshaler. |
 | `xml_unmarshal` | Allowed values: `string` or `value` | Same as the `--xml` flag but only sets the unmarshaler. |-->
-| `drop_json` | *(no value)* | Prevent JSON marshaling methods from being generated. |
-<!--| `drop_xml` | *(no value)* | Prevent XML marshaling methods from being generated. |-->
+| `drop_json` | *boolean* | Prevent JSON marshaling methods from being generated. |
+<!--| `drop_xml` | *boolean* | Prevent XML marshaling methods from being generated. |-->
 
 
 ###Variant flags

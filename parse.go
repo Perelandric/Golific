@@ -252,7 +252,9 @@ func (self *EnumRepr) gatherFlags(cgText string) (string, error) {
 		switch strings.ToLower(flag.Name) {
 
 		case "bitflags": // The enum values are to be bitflags
-			self.flags |= bitflags
+			if err = self.doBooleanFlag(flag, bitflags); err != nil {
+				return cgText, err
+			}
 
 		case "bitflag_separator": // The separator used when joining bitflags
 			if !flag.FoundEqual || len(flag.Value) == 0 {
@@ -318,10 +320,14 @@ func (self *EnumRepr) gatherFlags(cgText string) (string, error) {
 					}
 			*/
 		case "drop_json": // Do not generate JSON marshaling methods
-			self.flags |= dropJson
+			if err = self.doBooleanFlag(flag, dropJson); err != nil {
+				return cgText, err
+			}
 			/*
 				case "drop_xml": // Do not generate XML marshaling methods
-					self.flags |= dropXml
+					if err = self.doBooleanFlag(flag, dropXml); err != nil {
+						return cgText, err
+					}
 			*/
 		default:
 			return cgText, fmt.Errorf("Unknown flag %q", flag.Name)
@@ -329,6 +335,17 @@ func (self *EnumRepr) gatherFlags(cgText string) (string, error) {
 	}
 
 	return cgText, nil
+}
+
+func (self *EnumRepr) doBooleanFlag(flag Flag, toSet int) error {
+	if !flag.FoundEqual || flag.Value == "true" {
+		self.flags |= dropJson
+	} else if flag.Value == "false" {
+		self.flags &^= dropJson
+	} else {
+		return fmt.Errorf("Invalid value %q for %q", flag.Value, flag.Name)
+	}
+	return nil
 }
 
 func (self *FieldRepr) gatherFlags(cgText string) (string, error) {
