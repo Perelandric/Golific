@@ -44,8 +44,9 @@ res := Resident{
  Pet: Animal.Dog, // Assign one of the variants
 }
 
-// The `--json=string` flag causes our custom `--string` value to be used in the resulting JSON
+// The `--json=string` flag we included causes our custom `--string` value to be used in the JSON
 j, err := json.Marshal(&res)
+
 fmt.Printf("%s %s\n", j, err) // {"Name":"Charlie Brown","Pet":"doggie"} <nil>
 
 // Enumerate all the variants in a range loop
