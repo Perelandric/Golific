@@ -88,6 +88,11 @@ func (self *EnumRepr) GetUniqueName() string {
 	return self.unique
 }
 
+func (self *EnumRepr) GetReceiverName() string {
+	r, _ := utf8.DecodeRuneInString(self.Name)
+	return string(r) + "e"
+}
+
 func (self *EnumRepr) DoJson() bool { return self.flags&dropJson == 0 }
 func (self *EnumRepr) DoXml() bool  { return self.flags&dropXml == 0 }
 

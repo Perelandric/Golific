@@ -55,7 +55,7 @@ import (
 {{- range $repr := .Reprs}}
 {{- $intType := .GetIntType}}
 {{- $uniqField := .GetUniqueName}}
-{{- $self := "self"}}
+{{- $self := .GetReceiverName}}
 
 /*****************************
 
