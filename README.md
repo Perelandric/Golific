@@ -1,14 +1,6 @@
 # GoEnum
 
-**GoEnum** works with the `generate` command to create namespaced enums using structs, providing greater type safety as well as other features, including:
-
- - A `String()` method, allowing you to print the name of the enum variant or the optional custom value.
- - A `Description()` method, that will print the optional description of each variant.
- - The ability to marshal and/or unmarshal JSON (TODO: and XML) to the string value instead of the number.
- - A `Value()` method for retrieving the numeric representation of the variant.
- - The ability to assign a custom numeric value.
- - The ability to define an enum's variants as bitflags.
- - A generated array of the variants, to be used with a `range` loop.
+**GoEnum** works with the `generate` command to create namespaced enums using structs, providing greater type safety as well as offering several other features.
 
 # Quick start
 
@@ -72,8 +64,8 @@ for _, animal := range AnimalValues {
 ###Functionality
  - **How are the variants stored and referenced?**
   - For each enum, the variants are stored together in an anonymous struct value assigned to a variable. They are referenced as `Animal.Dog`.
- - **How do I access the numeric representation of a variant?**
-  - Use the `.Value()` method.
+ - **Can I get the numeric representation of a variant?**
+  - Use the `.Value()` or `.IntValue()` method.
  - **Will GoEnum generate bitflag numbers for me?**
   - Yes, using the `--bitflags` flag.
  - **Can I choose the numeric representation?**
@@ -81,7 +73,7 @@ for _, animal := range AnimalValues {
  - **Can negative numbers be used for the numeric representation?**
   - No, the numbers must be `0` or greater and it is recommended that `0` be reserved to denote no value having been set, unless a default variant makes sense.
  - **Can I get the name of a variant as a `string`? If so, can I define a string that differs from the variant name?**
-  - Yes, using the `.String()` method and yes, a custom string can be defined using the `--string` flag.
+  - Yes, the `.Name()` method gives you the name and the `.String()` method gives you an optional custom string defined using the `--string` flag.
  - **Can meta data be associated with each variant?**
   - Yes, each variant can have a description assigned using the `--description` flag, which is accessed using the `.Description()` method.
  - **Can I have JSON (TODO: and XML) marshaled to and unmarshaled from the string value instead of the number?**
