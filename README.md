@@ -112,18 +112,6 @@ To install GoEnum, use the `install` command from the Go toolchain.
 go install github.com/Perelandric/GoEnum
 ```
 
-###Using the `generate` command
-
-After your source code has been properly annotated as described below, then from your source directory run the `generate` command.
-
-```
-go generate
-```
-
-This creates a new file for every file that had the proper annotations. The new file has the same name as the original, but with an `enum____` prefix, so make sure you don't already have a file with a conflicting name. The generated file also gets the same `package` name as the original.
-
-Do not edit the generated file, as it will be overwritten every time you call `generate`.
-
 ###Setup for the `generate` command
 
 As with all files that rely on Go's `generate` command, your file must have the `go:generate` directive below the file package name and imports. For GoEnum, it should look like this:
@@ -207,7 +195,17 @@ Horse --string=horsie --description="Everyone loves horses."
 
 So our examples are now fully valid enum descriptors. As long as you have the `go:generate` annotation previously defined, you'll be able to run `go generate` and your new source file will be generated.
 
-The rest of the documentation will use the multi-line version of our descriptor example.
+###Using the `generate` command
+
+After your source code has been properly annotated as described above, from your source directory run the `generate` command.
+
+```
+go generate
+```
+
+This creates a new file for every file that had the proper annotations. The new file has the same name as the original, but with an `enum____` prefix, so make sure you don't already have a file with a conflicting name. The generated file also gets the same `package` name as the original.
+
+Do not edit the generated file, as it will be overwritten every time you call `generate`.
 
 #Flags, Methods and everything else
 
