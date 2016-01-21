@@ -89,6 +89,18 @@ func ({{$self}} {{$repr.Name}}Enum) IntValue() int {
 	return int({{$self}}.{{$uniqField}})
 }
 
+// Get the name of the variant.
+func ({{$self}} {{$repr.Name}}Enum) Name() string {
+	switch {{$self}}.{{$uniqField}} {
+	{{range $f := .Fields -}}
+	case {{$f.Value}}:
+		return "{{$f.Name}}"
+	{{end -}}
+	}
+	
+	return ""
+}
+
 // Get the string representation of the enum variant
 func ({{$self}} {{$repr.Name}}Enum) String() string {
 	switch {{$self}}.{{$uniqField}} {
