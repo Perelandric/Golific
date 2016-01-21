@@ -274,16 +274,16 @@ func (self *EnumRepr) gatherFlags(cgText string) (string, error) {
 			if err != nil {
 				return cgText, err
 			}
-
-		case "xml": // Set type of XML marshaler and unmarshaler
-			if !flag.FoundEqual || len(flag.Value) == 0 {
-				return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
-			}
-			err = self.setMarshal(flag, xmlMarshalIsString|xmlUnmarshalIsString)
-			if err != nil {
-				return cgText, err
-			}
-
+			/*
+				case "xml": // Set type of XML marshaler and unmarshaler
+					if !flag.FoundEqual || len(flag.Value) == 0 {
+						return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
+					}
+					err = self.setMarshal(flag, xmlMarshalIsString|xmlUnmarshalIsString)
+					if err != nil {
+						return cgText, err
+					}
+			*/
 		case "json_marshal": // Set type of JSON marshaler
 			if !flag.FoundEqual || len(flag.Value) == 0 {
 				return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
@@ -300,29 +300,29 @@ func (self *EnumRepr) gatherFlags(cgText string) (string, error) {
 			if err = self.setMarshal(flag, jsonUnmarshalIsString); err != nil {
 				return cgText, err
 			}
+			/*
+				case "xml_marshal": // Set type of XML marshaler
+					if !flag.FoundEqual || len(flag.Value) == 0 {
+						return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
+					}
+					if err = self.setMarshal(flag, xmlMarshalIsString); err != nil {
+						return cgText, err
+					}
 
-		case "xml_marshal": // Set type of XML marshaler
-			if !flag.FoundEqual || len(flag.Value) == 0 {
-				return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
-			}
-			if err = self.setMarshal(flag, xmlMarshalIsString); err != nil {
-				return cgText, err
-			}
-
-		case "xml_unmarshal": // Set type of XML unmarshaler
-			if !flag.FoundEqual || len(flag.Value) == 0 {
-				return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
-			}
-			if err = self.setMarshal(flag, xmlUnmarshalIsString); err != nil {
-				return cgText, err
-			}
-
+				case "xml_unmarshal": // Set type of XML unmarshaler
+					if !flag.FoundEqual || len(flag.Value) == 0 {
+						return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
+					}
+					if err = self.setMarshal(flag, xmlUnmarshalIsString); err != nil {
+						return cgText, err
+					}
+			*/
 		case "drop_json": // Do not generate JSON marshaling methods
 			self.flags |= dropJson
-
-		case "drop_xml": // Do not generate XML marshaling methods
-			self.flags |= dropXml
-
+			/*
+				case "drop_xml": // Do not generate XML marshaling methods
+					self.flags |= dropXml
+			*/
 		default:
 			return cgText, fmt.Errorf("Unknown flag %q", flag.Name)
 		}
