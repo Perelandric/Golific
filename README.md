@@ -249,9 +249,9 @@ The methods described in this section use `MyEnum` as a placeholder name for the
 
 `func (me MyEnum) Description() string` - Description returns the given `--description` value of the variant. If None has been set, its return value is as though `String()` had been called.
 
-`func (me MyEnum) Value() uint?` - Returns the numeric value of the variant as the specific `uint` size that it the variant uses.
+`func (me MyEnum) Value() uint?` - Value returns the numeric value of the variant as the specific `uint` size that it the variant uses.
 
-`func (me MyEnum) IntValue() int` - Same as `Value()`, except that the value is cast to an `int`.
+`func (me MyEnum) IntValue() int` - IntValue is the same as `Value()`, except that the value is cast to an `int`.
 
 #####*Methods for bitflag enums*
 
