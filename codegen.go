@@ -56,53 +56,59 @@ import (
 {{- $intType := .GetIntType}}
 {{- $uniqField := .GetUniqueName}}
 {{- $self := .GetReceiverName}}
+{{- $variantType := printf "%sEnum" $repr.Name}}
 
 /*****************************
 
-{{$repr.Name}}Enum{{if .IsBitflag}} - bit flags{{end}}
+{{$variantType}}{{if .IsBitflag}} - bit flags{{end}}
 
 ******************************/
 
-type {{$repr.Name}}Enum struct{ {{$uniqField}} {{$intType}} }
+type {{$variantType}} struct{ {{$uniqField}} {{$intType}} }
 
 var {{$repr.Name}} = struct {
 	{{- range $f := .Fields}}
-	{{$f.Name}} {{$repr.Name}}Enum
+	{{$f.Name}} {{$variantType}}
 	{{- end}}
 }{
 	{{- range $f := .Fields}}
-	{{$f.Name}}: {{$repr.Name}}Enum{ {{$uniqField}}: {{$f.Value}} },
+	{{$f.Name}}: {{$variantType}}{ {{$uniqField}}: {{$f.Value}} },
 	{{- end}}
 }
 
 // Used to iterate in range loops
-var {{.GetIterName}} = [...]{{$repr.Name}}Enum{
+var {{.GetIterName}} = [...]{{$variantType}}{
 	{{range $f := .Fields}} {{$repr.Name}}.{{$f.Name}},{{end}}
 }
 
 // Get the integer value of the enum variant
-func ({{$self}} {{$repr.Name}}Enum) Value() {{$intType}} {
+func ({{$self}} {{$variantType}}) Value() {{$intType}} {
 	return {{$self}}.{{$uniqField}}
 }
 
-func ({{$self}} {{$repr.Name}}Enum) IntValue() int {
+func ({{$self}} {{$variantType}}) IntValue() int {
 	return int({{$self}}.{{$uniqField}})
 }
 
-// Get the name of the variant.
-func ({{$self}} {{$repr.Name}}Enum) Name() string {
+// Name returns the name of the variant as a string.
+func ({{$self}} {{$variantType}}) Name() string {
 	switch {{$self}}.{{$uniqField}} {
 	{{range $f := .Fields -}}
 	case {{$f.Value}}:
 		return "{{$f.Name}}"
 	{{end -}}
 	}
-	
+
 	return ""
 }
 
-// Get the string representation of the enum variant
-func ({{$self}} {{$repr.Name}}Enum) String() string {
+// String returns the given string value of the variant. If none has been set,
+// its return value is as though 'Name()' had been called.
+{{if .IsBitflag -}}
+// If multiple bit values are assigned, the string values will be joined into a
+// single string using "{{.FlagSep}}" as a separator.
+{{- end}}
+func ({{$self}} {{$variantType}}) String() string {
 	switch {{$self}}.{{$uniqField}} {
 	{{range $f := .Fields -}}
 	case {{$f.Value}}:
@@ -128,8 +134,9 @@ func ({{$self}} {{$repr.Name}}Enum) String() string {
 	{{end -}}
 }
 
-// Get the string description of the enum variant
-func ({{$self}} {{$repr.Name}}Enum) Description() string {
+// Description returns the description of the variant. If none has been set, its
+// return value is as though 'String()' had been called.
+func ({{$self}} {{$variantType}}) Description() string {
   switch {{$self}}.{{$uniqField}} {
 	{{range $f := .Fields -}}
 	case {{$f.Value}}:
@@ -142,17 +149,17 @@ func ({{$self}} {{$repr.Name}}Enum) Description() string {
 {{if $repr.DoJson -}}
 // JSON marshaling methods
 {{if $repr.JsonMarshalIsString -}}
-func ({{$self}} {{$repr.Name}}Enum) MarshalJSON() ([]byte, error) {
+func ({{$self}} {{$variantType}}) MarshalJSON() ([]byte, error) {
   return []byte(strconv.Quote({{$self}}.String())), nil
 }
 {{- else -}}
-func ({{$self}} {{$repr.Name}}Enum) MarshalJSON() ([]byte, error) {
+func ({{$self}} {{$variantType}}) MarshalJSON() ([]byte, error) {
   return []byte(strconv.Itoa({{$self}}.IntValue())), nil
 }
 {{- end}}
 
 {{if $repr.JsonUnmarshalIsString -}}
-func ({{$self}} *{{$repr.Name}}Enum) UnmarshalJSON(b []byte) error {
+func ({{$self}} *{{$variantType}}) UnmarshalJSON(b []byte) error {
 	var s, err = strconv.Unquote(string(b))
 	if err != nil {
 		return err
@@ -170,7 +177,7 @@ func ({{$self}} *{{$repr.Name}}Enum) UnmarshalJSON(b []byte) error {
 	{{end -}}
 	{{if not .IsBitflag -}}
 	default:
-		log.Printf("Unexpected value: %q while unmarshaling {{$repr.Name}}Enum\n", s)
+		log.Printf("Unexpected value: %q while unmarshaling {{$variantType}}\n", s)
 	{{end -}}
 	}
 
@@ -184,7 +191,7 @@ func ({{$self}} *{{$repr.Name}}Enum) UnmarshalJSON(b []byte) error {
 			val |= {{$f.Value}}
 		{{end -}}
   	default:
-			log.Printf("Unexpected value: %q while unmarshaling {{$repr.Name}}Enum\n", part)
+			log.Printf("Unexpected value: %q while unmarshaling {{$variantType}}\n", part)
 		}
 	}
 
@@ -194,7 +201,7 @@ func ({{$self}} *{{$repr.Name}}Enum) UnmarshalJSON(b []byte) error {
 	return nil
 }
 {{else -}}
-func ({{$self}} *{{$repr.Name}}Enum) UnmarshalJSON(b []byte) error {
+func ({{$self}} *{{$variantType}}) UnmarshalJSON(b []byte) error {
 	var n, err = strconv.ParseUint(string(b), 10, 64)
 	if err != nil {
 		return err
@@ -211,35 +218,35 @@ func ({{$self}} *{{$repr.Name}}Enum) UnmarshalJSON(b []byte) error {
 
 {{- if .IsBitflag}}
 // Bitflag enum methods
-func ({{$self}} {{$repr.Name}}Enum) Add(v {{$repr.Name}}Enum) {{$repr.Name}}Enum {
+func ({{$self}} {{$variantType}}) Add(v {{$variantType}}) {{$variantType}} {
 	{{$self}}.{{$uniqField}} |= v.{{$uniqField}}
 	return {{$self}}
 }
 
-func ({{$self}} {{$repr.Name}}Enum) AddAll(v ...{{$repr.Name}}Enum) {{$repr.Name}}Enum {
+func ({{$self}} {{$variantType}}) AddAll(v ...{{$variantType}}) {{$variantType}} {
 	for _, item := range v {
 		{{$self}}.{{$uniqField}} |= item.{{$uniqField}}
 	}
 	return {{$self}}
 }
 
-func ({{$self}} {{$repr.Name}}Enum) Remove(v {{$repr.Name}}Enum) {{$repr.Name}}Enum {
+func ({{$self}} {{$variantType}}) Remove(v {{$variantType}}) {{$variantType}} {
 	{{$self}}.{{$uniqField}} &^= v.{{$uniqField}}
 	return {{$self}}
 }
 
-func ({{$self}} {{$repr.Name}}Enum) RemoveAll(v ...{{$repr.Name}}Enum) {{$repr.Name}}Enum {
+func ({{$self}} {{$variantType}}) RemoveAll(v ...{{$variantType}}) {{$variantType}} {
 	for _, item := range v {
 		{{$self}}.{{$uniqField}} &^= item.{{$uniqField}}
 	}
 	return {{$self}}
 }
 
-func ({{$self}} {{$repr.Name}}Enum) Has(v {{$repr.Name}}Enum) bool {
+func ({{$self}} {{$variantType}}) Has(v {{$variantType}}) bool {
 	return {{$self}}.{{$uniqField}}&v.{{$uniqField}} == v.{{$uniqField}}
 }
 
-func ({{$self}} {{$repr.Name}}Enum) HasAny(v ...{{$repr.Name}}Enum) bool {
+func ({{$self}} {{$variantType}}) HasAny(v ...{{$variantType}}) bool {
 	for _, item := range v {
 		if {{$self}}.{{$uniqField}}&item.{{$uniqField}} == item.{{$uniqField}} {
 			return true
@@ -248,7 +255,7 @@ func ({{$self}} {{$repr.Name}}Enum) HasAny(v ...{{$repr.Name}}Enum) bool {
 	return false
 }
 
-func ({{$self}} {{$repr.Name}}Enum) HasAll(v ...{{$repr.Name}}Enum) bool {
+func ({{$self}} {{$variantType}}) HasAll(v ...{{$variantType}}) bool {
 	for _, item := range v {
 		if {{$self}}.{{$uniqField}}&item.{{$uniqField}} != item.{{$uniqField}} {
 			return false

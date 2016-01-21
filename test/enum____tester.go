@@ -12,16 +12,16 @@ FooEnum - bit flags
 
 ******************************/
 
-type FooEnum struct{ value_1w4fm668mq46c uint8 }
+type FooEnum struct{ value_ozm2isme28ob uint8 }
 
 var Foo = struct {
 	Bar FooEnum
 	Baz FooEnum
 	Buz FooEnum
 }{
-	Bar: FooEnum{value_1w4fm668mq46c: 1},
-	Baz: FooEnum{value_1w4fm668mq46c: 2},
-	Buz: FooEnum{value_1w4fm668mq46c: 4},
+	Bar: FooEnum{value_ozm2isme28ob: 1},
+	Baz: FooEnum{value_ozm2isme28ob: 2},
+	Buz: FooEnum{value_ozm2isme28ob: 4},
 }
 
 // Used to iterate in range loops
@@ -31,16 +31,16 @@ var foobar = [...]FooEnum{
 
 // Get the integer value of the enum variant
 func (Fe FooEnum) Value() uint8 {
-	return Fe.value_1w4fm668mq46c
+	return Fe.value_ozm2isme28ob
 }
 
 func (Fe FooEnum) IntValue() int {
-	return int(Fe.value_1w4fm668mq46c)
+	return int(Fe.value_ozm2isme28ob)
 }
 
-// Get the name of the variant.
+// Name returns the name of the variant as a string.
 func (Fe FooEnum) Name() string {
-	switch Fe.value_1w4fm668mq46c {
+	switch Fe.value_ozm2isme28ob {
 	case 1:
 		return "Bar"
 	case 2:
@@ -52,9 +52,12 @@ func (Fe FooEnum) Name() string {
 	return ""
 }
 
-// Get the string representation of the enum variant
+// String returns the given string value of the variant. If none has been set,
+// its return value is as though 'Name()' had been called.
+// If multiple bit values are assigned, the string values will be joined into a
+// single string using "," as a separator.
 func (Fe FooEnum) String() string {
-	switch Fe.value_1w4fm668mq46c {
+	switch Fe.value_ozm2isme28ob {
 	case 1:
 		return "bar"
 	case 2:
@@ -63,23 +66,24 @@ func (Fe FooEnum) String() string {
 		return "Buz"
 	}
 
-	if Fe.value_1w4fm668mq46c == 0 {
+	if Fe.value_ozm2isme28ob == 0 {
 		return ""
 	}
 
 	var vals = make([]string, 0, 3/2)
 
 	for _, item := range foobar {
-		if Fe.value_1w4fm668mq46c&item.value_1w4fm668mq46c == item.value_1w4fm668mq46c {
+		if Fe.value_ozm2isme28ob&item.value_ozm2isme28ob == item.value_ozm2isme28ob {
 			vals = append(vals, item.String())
 		}
 	}
 	return strings.Join(vals, ",")
 }
 
-// Get the string description of the enum variant
+// Description returns the description of the variant. If none has been set, its
+// return value is as though 'String()' had been called.
 func (Fe FooEnum) Description() string {
-	switch Fe.value_1w4fm668mq46c {
+	switch Fe.value_ozm2isme28ob {
 	case 1:
 		return "bar"
 	case 2:
@@ -107,13 +111,13 @@ func (Fe *FooEnum) UnmarshalJSON(b []byte) error {
 
 	switch s {
 	case "bar":
-		Fe.value_1w4fm668mq46c = 1
+		Fe.value_ozm2isme28ob = 1
 		return nil
 	case "baz":
-		Fe.value_1w4fm668mq46c = 2
+		Fe.value_ozm2isme28ob = 2
 		return nil
 	case "Buz":
-		Fe.value_1w4fm668mq46c = 4
+		Fe.value_ozm2isme28ob = 4
 		return nil
 	}
 
@@ -132,43 +136,43 @@ func (Fe *FooEnum) UnmarshalJSON(b []byte) error {
 		}
 	}
 
-	Fe.value_1w4fm668mq46c = uint8(val)
+	Fe.value_ozm2isme28ob = uint8(val)
 	return nil
 }
 
 // XML marshaling methods to come
 // Bitflag enum methods
 func (Fe FooEnum) Add(v FooEnum) FooEnum {
-	Fe.value_1w4fm668mq46c |= v.value_1w4fm668mq46c
+	Fe.value_ozm2isme28ob |= v.value_ozm2isme28ob
 	return Fe
 }
 
 func (Fe FooEnum) AddAll(v ...FooEnum) FooEnum {
 	for _, item := range v {
-		Fe.value_1w4fm668mq46c |= item.value_1w4fm668mq46c
+		Fe.value_ozm2isme28ob |= item.value_ozm2isme28ob
 	}
 	return Fe
 }
 
 func (Fe FooEnum) Remove(v FooEnum) FooEnum {
-	Fe.value_1w4fm668mq46c &^= v.value_1w4fm668mq46c
+	Fe.value_ozm2isme28ob &^= v.value_ozm2isme28ob
 	return Fe
 }
 
 func (Fe FooEnum) RemoveAll(v ...FooEnum) FooEnum {
 	for _, item := range v {
-		Fe.value_1w4fm668mq46c &^= item.value_1w4fm668mq46c
+		Fe.value_ozm2isme28ob &^= item.value_ozm2isme28ob
 	}
 	return Fe
 }
 
 func (Fe FooEnum) Has(v FooEnum) bool {
-	return Fe.value_1w4fm668mq46c&v.value_1w4fm668mq46c == v.value_1w4fm668mq46c
+	return Fe.value_ozm2isme28ob&v.value_ozm2isme28ob == v.value_ozm2isme28ob
 }
 
 func (Fe FooEnum) HasAny(v ...FooEnum) bool {
 	for _, item := range v {
-		if Fe.value_1w4fm668mq46c&item.value_1w4fm668mq46c == item.value_1w4fm668mq46c {
+		if Fe.value_ozm2isme28ob&item.value_ozm2isme28ob == item.value_ozm2isme28ob {
 			return true
 		}
 	}
@@ -177,7 +181,7 @@ func (Fe FooEnum) HasAny(v ...FooEnum) bool {
 
 func (Fe FooEnum) HasAll(v ...FooEnum) bool {
 	for _, item := range v {
-		if Fe.value_1w4fm668mq46c&item.value_1w4fm668mq46c != item.value_1w4fm668mq46c {
+		if Fe.value_ozm2isme28ob&item.value_ozm2isme28ob != item.value_ozm2isme28ob {
 			return false
 		}
 	}
@@ -190,16 +194,16 @@ OofEnum
 
 ******************************/
 
-type OofEnum struct{ value_1jz76xyyojs22 uint8 }
+type OofEnum struct{ value_15qq6g04bmcgm uint8 }
 
 var Oof = struct {
 	Bar OofEnum
 	Baz OofEnum
 	Buz OofEnum
 }{
-	Bar: OofEnum{value_1jz76xyyojs22: 1},
-	Baz: OofEnum{value_1jz76xyyojs22: 123},
-	Buz: OofEnum{value_1jz76xyyojs22: 3},
+	Bar: OofEnum{value_15qq6g04bmcgm: 1},
+	Baz: OofEnum{value_15qq6g04bmcgm: 123},
+	Buz: OofEnum{value_15qq6g04bmcgm: 3},
 }
 
 // Used to iterate in range loops
@@ -209,16 +213,16 @@ var OofValues = [...]OofEnum{
 
 // Get the integer value of the enum variant
 func (Oe OofEnum) Value() uint8 {
-	return Oe.value_1jz76xyyojs22
+	return Oe.value_15qq6g04bmcgm
 }
 
 func (Oe OofEnum) IntValue() int {
-	return int(Oe.value_1jz76xyyojs22)
+	return int(Oe.value_15qq6g04bmcgm)
 }
 
-// Get the name of the variant.
+// Name returns the name of the variant as a string.
 func (Oe OofEnum) Name() string {
-	switch Oe.value_1jz76xyyojs22 {
+	switch Oe.value_15qq6g04bmcgm {
 	case 1:
 		return "Bar"
 	case 123:
@@ -230,9 +234,11 @@ func (Oe OofEnum) Name() string {
 	return ""
 }
 
-// Get the string representation of the enum variant
+// String returns the given string value of the variant. If none has been set,
+// its return value is as though 'Name()' had been called.
+
 func (Oe OofEnum) String() string {
-	switch Oe.value_1jz76xyyojs22 {
+	switch Oe.value_15qq6g04bmcgm {
 	case 1:
 		return "bar"
 	case 123:
@@ -244,9 +250,10 @@ func (Oe OofEnum) String() string {
 	return ""
 }
 
-// Get the string description of the enum variant
+// Description returns the description of the variant. If none has been set, its
+// return value is as though 'String()' had been called.
 func (Oe OofEnum) Description() string {
-	switch Oe.value_1jz76xyyojs22 {
+	switch Oe.value_15qq6g04bmcgm {
 	case 1:
 		return "bar"
 	case 123:
@@ -267,7 +274,7 @@ func (Oe *OofEnum) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	Oe.value_1jz76xyyojs22 = uint8(n)
+	Oe.value_15qq6g04bmcgm = uint8(n)
 	return nil
 }
 
@@ -279,16 +286,16 @@ AnimalEnum
 
 ******************************/
 
-type AnimalEnum struct{ value_nucqco507hsc uint8 }
+type AnimalEnum struct{ value_dy4t478xq8cx uint8 }
 
 var Animal = struct {
 	Dog   AnimalEnum
 	Cat   AnimalEnum
 	Horse AnimalEnum
 }{
-	Dog:   AnimalEnum{value_nucqco507hsc: 1},
-	Cat:   AnimalEnum{value_nucqco507hsc: 2},
-	Horse: AnimalEnum{value_nucqco507hsc: 3},
+	Dog:   AnimalEnum{value_dy4t478xq8cx: 1},
+	Cat:   AnimalEnum{value_dy4t478xq8cx: 2},
+	Horse: AnimalEnum{value_dy4t478xq8cx: 3},
 }
 
 // Used to iterate in range loops
@@ -298,16 +305,16 @@ var AnimalValues = [...]AnimalEnum{
 
 // Get the integer value of the enum variant
 func (Ae AnimalEnum) Value() uint8 {
-	return Ae.value_nucqco507hsc
+	return Ae.value_dy4t478xq8cx
 }
 
 func (Ae AnimalEnum) IntValue() int {
-	return int(Ae.value_nucqco507hsc)
+	return int(Ae.value_dy4t478xq8cx)
 }
 
-// Get the name of the variant.
+// Name returns the name of the variant as a string.
 func (Ae AnimalEnum) Name() string {
-	switch Ae.value_nucqco507hsc {
+	switch Ae.value_dy4t478xq8cx {
 	case 1:
 		return "Dog"
 	case 2:
@@ -319,9 +326,11 @@ func (Ae AnimalEnum) Name() string {
 	return ""
 }
 
-// Get the string representation of the enum variant
+// String returns the given string value of the variant. If none has been set,
+// its return value is as though 'Name()' had been called.
+
 func (Ae AnimalEnum) String() string {
-	switch Ae.value_nucqco507hsc {
+	switch Ae.value_dy4t478xq8cx {
 	case 1:
 		return "doggy"
 	case 2:
@@ -333,9 +342,10 @@ func (Ae AnimalEnum) String() string {
 	return ""
 }
 
-// Get the string description of the enum variant
+// Description returns the description of the variant. If none has been set, its
+// return value is as though 'String()' had been called.
 func (Ae AnimalEnum) Description() string {
-	switch Ae.value_nucqco507hsc {
+	switch Ae.value_dy4t478xq8cx {
 	case 1:
 		return "Your best friend, and you know it."
 	case 2:
@@ -363,13 +373,13 @@ func (Ae *AnimalEnum) UnmarshalJSON(b []byte) error {
 
 	switch s {
 	case "doggy":
-		Ae.value_nucqco507hsc = 1
+		Ae.value_dy4t478xq8cx = 1
 		return nil
 	case "kitty":
-		Ae.value_nucqco507hsc = 2
+		Ae.value_dy4t478xq8cx = 2
 		return nil
 	case "horsie":
-		Ae.value_nucqco507hsc = 3
+		Ae.value_dy4t478xq8cx = 3
 		return nil
 	default:
 		log.Printf("Unexpected value: %q while unmarshaling AnimalEnum\n", s)
