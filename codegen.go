@@ -230,11 +230,14 @@ func ({{$self}} *{{$variantType}}) UnmarshalJSON(b []byte) error {
 
 {{- if .IsBitflag}}
 // Bitflag enum methods
+
+// Add returns a copy of the variant with the value of 'v' added to it.
 func ({{$self}} {{$variantType}}) Add(v {{$variantType}}) {{$variantType}} {
 	{{$self}}.{{$uniqField}} |= v.{{$uniqField}}
 	return {{$self}}
 }
 
+// AddAll returns a copy of the variant with all the values of 'v' added to it.
 func ({{$self}} {{$variantType}}) AddAll(v ...{{$variantType}}) {{$variantType}} {
 	for _, item := range v {
 		{{$self}}.{{$uniqField}} |= item.{{$uniqField}}
@@ -242,11 +245,14 @@ func ({{$self}} {{$variantType}}) AddAll(v ...{{$variantType}}) {{$variantType}}
 	return {{$self}}
 }
 
+// Remove returns a copy of the variant with the value of 'v' removed from it.
 func ({{$self}} {{$variantType}}) Remove(v {{$variantType}}) {{$variantType}} {
 	{{$self}}.{{$uniqField}} &^= v.{{$uniqField}}
 	return {{$self}}
 }
 
+// RemoveAll returns a copy of the variant with all the values of 'v' removed
+// from it.
 func ({{$self}} {{$variantType}}) RemoveAll(v ...{{$variantType}}) {{$variantType}} {
 	for _, item := range v {
 		{{$self}}.{{$uniqField}} &^= item.{{$uniqField}}
@@ -254,10 +260,14 @@ func ({{$self}} {{$variantType}}) RemoveAll(v ...{{$variantType}}) {{$variantTyp
 	return {{$self}}
 }
 
+// Has returns 'true' if the receiver contains the value of 'v', otherwise
+// 'false'.
 func ({{$self}} {{$variantType}}) Has(v {{$variantType}}) bool {
 	return {{$self}}.{{$uniqField}}&v.{{$uniqField}} == v.{{$uniqField}}
 }
 
+// HasAny returns 'true' if the receiver contains any of the values of 'v', 
+// otherwise 'false'.
 func ({{$self}} {{$variantType}}) HasAny(v ...{{$variantType}}) bool {
 	for _, item := range v {
 		if {{$self}}.{{$uniqField}}&item.{{$uniqField}} == item.{{$uniqField}} {
@@ -267,6 +277,8 @@ func ({{$self}} {{$variantType}}) HasAny(v ...{{$variantType}}) bool {
 	return false
 }
 
+// HasAll returns 'true' if the receiver contains all the values of 'v',
+// otherwise 'false'.
 func ({{$self}} {{$variantType}}) HasAll(v ...{{$variantType}}) bool {
 	for _, item := range v {
 		if {{$self}}.{{$uniqField}}&item.{{$uniqField}} != item.{{$uniqField}} {

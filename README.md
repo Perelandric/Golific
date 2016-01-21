@@ -257,7 +257,19 @@ The methods described in this section use `MyEnum` as a placeholder name for the
 
 The methods below are only generated when the enum uses the `--bitflags` option.
 
-*Coming soon...*
+`func (me MyEnum) Add(v MyEnum) MyEnum` - Add returns a copy of the variant with the value of `v` added to it.
+
+`func (me MyEnum) AddAll(v ...MyEnum) MyEnum` - AddAll returns a copy of the variant with all the values of `v` added to it.
+
+`func (me MyEnum) Remove(v MyEnum) MyEnum` - Remove returns a copy of the variant with the value of `v` removed from it.
+
+`func (me MyEnum) RemoveAll(v ...MyEnum) MyEnum` - RemoveAll returns a copy of the variant with all the values of `v` removed from it.
+
+`func (me MyEnum) Has(v MyEnum) MyEnum` - Has returns `true` if the receiver contains the value of `v`, otherwise `false`.
+
+`func (me MyEnum) HasAny(v MyEnum) MyEnum` - HasAny returns `true` if the receiver contains any of the values of `v`, otherwise `false`.
+
+`func (me MyEnum) HasAll(v MyEnum) MyEnum` - HasAll returns `true` if the receiver contains all the values of `v`, otherwise `false`.
 
 #####*Other items*
 
