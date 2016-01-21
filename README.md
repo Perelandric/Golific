@@ -247,6 +247,20 @@ These are the flags available for use in each variant. All of the flags are opti
 | `description` | Any string of text. | This sets the value returned by the `.Description()` method. If empty, the `--string` value is used. |
 | `value` | Any integer >= 0 | This overrides the default numeric value of the variant. It may *not* be used when `--bitflags` is used. The value must not have been already assigned to another variant. The value `0` should only be used for a variant that makes sense to use as a default value. |
 
-###Methods
+###Variant Methods
+
+`func Name() string` - Returns the name of the variant as a string.
+
+`func String() string` - Returns the given `--string` value of the variant. If none has been set, its return value is as though `Name()` had been called.
+
+`func Description() string` - Returns the given `--description` value of the variant. If None has been set, its return value is as though `String()` had been called.
+
+`func Value() uint?` - Returns the numeric value of the variant as the specific `uint` size that it the variant uses.
+
+`func IntValue() int` - Same as `Value()`, except that the value is cast to an `int`.
+
+###Variant Methods (for bitflag enums)
+
+*The methods in this section are only generated when the enum uses the `--bitflags` option.*
 
 *Coming soon...*
