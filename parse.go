@@ -146,6 +146,11 @@ func (self *EnumData) doComment(cg *ast.CommentGroup) {
 
 		cgText = cgText[5:] // Strip away the `@enum`
 
+		if len(cgText) == 0 {
+			log.Println("Found @enum with no definition.")
+			break
+		}
+
 		if cgText, name, err = self.doEnum(cgText); err != nil {
 			if len(name) > 0 {
 				log.Printf("%s: %s\n", name, err)
@@ -163,13 +168,24 @@ func (self *EnumData) doComment(cg *ast.CommentGroup) {
 }
 
 func (self *EnumData) doEnum(cgText string) (string, string, error) {
-	var enum = EnumRepr{
+	enum := EnumRepr{
 		iterName: "Values",
 	}
 
 	var err error
 
-	if cgText, enum.Name, err = getIdent(strings.TrimSpace(cgText)); err != nil {
+	if !unicode.IsSpace(rune(cgText[0])) {
+		return cgText, "",
+			fmt.Errorf("@enum is expected to be followed by a space and the name.")
+	}
+
+	cgText, foundNewline := trimLeftCheckNewline(cgText)
+	if foundNewline {
+		return cgText, "",
+			fmt.Errorf("The name must be on the same line as the @enum")
+	}
+
+	if cgText, enum.Name, err = getIdent(cgText); err != nil {
 		return cgText, enum.Name, err
 	}
 
