@@ -273,4 +273,6 @@ The methods below are only generated when the enum uses the `--bitflags` option.
 
 #####*Other items*
 
-*Coming soon... (iterator array)*
+`MyEnum.Values` - By default, the `Values` field of your enum will reference an array of all the enum variants in their defined order. This can be used to iterate the variants in a `range` loop.
+
+If the name `Values` conflicts with a variant name you've defined, you can define an alternate name for the array by using the `--iterator_name` option.
