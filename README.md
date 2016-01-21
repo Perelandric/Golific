@@ -212,7 +212,7 @@ Do not edit the generated file, as it will be overwritten every time you call `g
 
 These are the flags available for use in the main `@enum` descriptor. They are distinct from the variant flags, which are listed in a separate table. All of the flags are optional.
 
-The *boolean* in the **Value** column means the allowed values are `true` or `false`, or if no equal sign and value is provide, it will be considered to be `true`.
+The word *boolean* in the **Value** column means the allowed values are `true` or `false`, or if no equal sign and value is provide, it will be considered to be `true`.
 
 | Flag | Value | Behavior |
 | :--: | ----- | -------- |
@@ -231,8 +231,8 @@ These are the flags available for use in each variant. All of the flags are opti
 
 | Flag | Value | Behavior |
 | :--: | ----- | -------- |
-| `string` | Any string of text. | This sets the the value returned by the `.String()` method. If empty, the variant name is used. |
-| `description` | Any string of text. | This sets the value returned by the `.Description()` method. If empty, the `--string` value is used. |
+| `string` | Any text. | This sets the the value returned by the `.String()` method. If empty, the variant name is used. |
+| `description` | Any text. | This sets the value returned by the `.Description()` method. If empty, the `--string` value is used. |
 | `value` | Any integer >= 0 | This overrides the default numeric value of the variant. It may *not* be used when `--bitflags` is used. The value must not have been already assigned to another variant. The value `0` should only be used for a variant that makes sense to use as a default value. |
 
 ###Variant Methods
