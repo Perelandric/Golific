@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"log"
@@ -19,6 +20,8 @@ const (
 	jsonUnmarshalIsString
 	xmlMarshalIsString
 	xmlUnmarshalIsString
+	dropJson
+	dropXml
 )
 
 type EnumData struct {
@@ -68,7 +71,7 @@ func (self *EnumData) DoFile(file string) error {
 	self.File = filepath.Join(dir, "enum____"+filename)
 
 	for _, cg := range f.Comments {
-		self.doComment(cg.Text())
+		self.doComment(cg)
 	}
 
 	if err := self.generateCode(); err != nil {
@@ -84,6 +87,9 @@ func (self *EnumRepr) GetUniqueName() string {
 	}
 	return self.unique
 }
+
+func (self *EnumRepr) DoJson() bool { return self.flags&dropJson == 0 }
+func (self *EnumRepr) DoXml() bool  { return self.flags&dropXml == 0 }
 
 func (self *EnumRepr) JsonMarshalIsString() bool {
 	return self.flags&jsonMarshalIsString == jsonMarshalIsString
@@ -115,39 +121,14 @@ func (repr *EnumRepr) GetIntType() string {
 	return "uint64"
 }
 
-func (self *EnumData) checkValidity(flgs, flds, errs bool, repr *EnumRepr) {
-	const warnMarshal = "WARNING: %s marshal and unmarshal do not match for %q\n"
-
-	if !flgs || !flds || errs {
-		if errs {
-			log.Println("Enums with errors are excluded")
-		} else {
-			log.Println("Incomplete definition. Both flags and Fields are required.")
-		}
-		if len(self.Reprs) > 0 {
-			self.Reprs = self.Reprs[0 : len(self.Reprs)-1]
-		}
-
-	} else if repr != nil {
-		// Warn if marshaling to string and unmarshaling to number, or vice versa.
-		if (repr.flags&jsonMarshalIsString == 0) !=
-			(repr.flags&jsonUnmarshalIsString == 0) {
-			log.Printf(warnMarshal, "JSON", repr.Name)
-		}
-		if (repr.flags&xmlMarshalIsString == 0) !=
-			(repr.flags&xmlUnmarshalIsString == 0) {
-			log.Printf(warnMarshal, "XML", repr.Name)
-		}
-	}
-}
-
-func (self *EnumData) doComment(cgText string) {
-	cgText = strings.TrimSpace(cgText)
-	var err error
+func (self *EnumData) doComment(cg *ast.CommentGroup) {
+	cgText := strings.TrimSpace(cg.Text())
 
 	if !strings.HasPrefix(cgText, "@enum") { // First item must be @enum
 		return
 	}
+
+	var err error
 
 	for {
 		cgText = strings.TrimSpace(cgText)
@@ -316,6 +297,12 @@ func (self *EnumRepr) gatherFlags(cgText string) (string, error) {
 			if err = self.setMarshal(flag, xmlUnmarshalIsString); err != nil {
 				return cgText, err
 			}
+
+		case "drop_json": // Do not generate JSON marshaling methods
+			self.flags |= dropJson
+
+		case "drop_xml": // Do not generate XML marshaling methods
+			self.flags |= dropXml
 
 		default:
 			return cgText, fmt.Errorf("Unknown flag %q", flag.Name)

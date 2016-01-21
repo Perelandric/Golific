@@ -126,6 +126,7 @@ func (self {{$repr.Name}}Enum) Description() string {
   return ""
 }
 
+{{if $repr.DoJson -}}
 // JSON marshaling methods
 {{if $repr.JsonMarshalIsString -}}
 func (self {{$repr.Name}}Enum) MarshalJSON() ([]byte, error) {
@@ -188,6 +189,11 @@ func (self *{{$repr.Name}}Enum) UnmarshalJSON(b []byte) error {
 	self.{{$uniqField}} = {{$intType}}(n)
 	return nil
 }
+{{- end}}
+{{- end}}
+
+{{if $repr.DoXml -}}
+// XML marshaling methods to come
 {{- end}}
 
 {{- if .IsBitflag}}

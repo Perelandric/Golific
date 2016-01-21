@@ -233,6 +233,8 @@ These are the flags available for use in the main `@enum` descriptor. They are d
 | `json_unmarshal` | Allowed values: `string` or `value` | Same as the `--json` flag but only sets the unmarshaler. |
 | `xml_marshal` | Allowed values: `string` or `value` | Same as the `--xml` flag but only sets the marshaler. |
 | `xml_unmarshal` | Allowed values: `string` or `value` | Same as the `--xml` flag but only sets the unmarshaler. |
+| `drop_json` | n/a | Prevent JSON marshaling methods from being generated. |
+| `drop_xml` | n/a | Prevent XML marshaling methods from being generated. |
 
 
 ###Variant flags
