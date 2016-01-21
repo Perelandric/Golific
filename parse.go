@@ -239,7 +239,7 @@ func (self *EnumRepr) doFields(cgText string) (_ string, err error) {
 }
 
 func (self *EnumRepr) gatherFlags(cgText string) (string, error) {
-	cgText, flags, foundNewline, err := gatherFlags(cgText)
+	cgText, flags, foundNewline, err := genericGatherFlags(cgText)
 	if err != nil {
 		return cgText, err
 	}
@@ -332,7 +332,7 @@ func (self *EnumRepr) gatherFlags(cgText string) (string, error) {
 }
 
 func (self *FieldRepr) gatherFlags(cgText string) (string, error) {
-	cgText, flags, foundNewline, err := gatherFlags(cgText)
+	cgText, flags, foundNewline, err := genericGatherFlags(cgText)
 	if err != nil {
 		return cgText, err
 	}
@@ -474,7 +474,7 @@ func trimLeftCheckNewline(s string) (string, bool) {
 	return s[n:], found
 }
 
-func gatherFlags(cgText string) (string, []Flag, bool, error) {
+func genericGatherFlags(cgText string) (string, []Flag, bool, error) {
 	var flags = make([]Flag, 0)
 	var foundNewline bool
 	var err error
