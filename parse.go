@@ -16,6 +16,7 @@ import (
 
 const (
 	bitflags = 1 << iota
+	summary
 	jsonMarshalIsString
 	jsonUnmarshalIsString
 	xmlMarshalIsString
@@ -93,8 +94,9 @@ func (self *EnumRepr) GetReceiverName() string {
 	return string(r) + "e"
 }
 
-func (self *EnumRepr) DoJson() bool { return self.flags&dropJson == 0 }
-func (self *EnumRepr) DoXml() bool  { return self.flags&dropXml == 0 }
+func (self *EnumRepr) DoSummary() bool { return self.flags&summary == summary }
+func (self *EnumRepr) DoJson() bool    { return self.flags&dropJson == 0 }
+func (self *EnumRepr) DoXml() bool     { return self.flags&dropXml == 0 }
 
 func (self *EnumRepr) JsonMarshalIsString() bool {
 	return self.flags&jsonMarshalIsString == jsonMarshalIsString
@@ -283,6 +285,11 @@ func (self *EnumRepr) gatherFlags(cgText string) (string, error) {
 				return cgText, fmt.Errorf("%q requires a valid identifier", flag.Name)
 			}
 			self.iterName = flag.Value
+
+		case "summary": // Include a summary of this enum at the top of the file
+			if err = self.doBooleanFlag(flag, summary); err != nil {
+				return cgText, err
+			}
 
 		case "json": // Set type of JSON marshaler and unmarshaler
 			if !flag.FoundEqual || len(flag.Value) == 0 {
