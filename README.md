@@ -164,7 +164,7 @@ Next is the set of descriptor flags. These flags begin with `--` and are followe
 ```
 
 Notice two differences in the above examples.
- - The first one uses quotes around `string`, and the second does not. As long as the value does not contain space characters, the quotation marks are optional.
+ - The first one uses quotes around `string`, and the second does not. As long as the value does not contain space characters, the quotation marks are optional. Single quotes (`'`), double quotes (`"`) or backticks (`&#96`) may be used.
  - The first one begins its flags on the same line as the `@enum`, and the second starts on the next line. Either way is valid.
 
 All flags are optional, and are described in the tables below.
