@@ -97,6 +97,7 @@ func (self *EnumRepr) GetReceiverName() string {
 func (self *EnumRepr) DoSummary() bool { return self.flags&summary == summary }
 func (self *EnumRepr) DoJson() bool    { return self.flags&dropJson == 0 }
 func (self *EnumRepr) DoXml() bool     { return self.flags&dropXml == 0 }
+func (self *EnumRepr) IsBitflag() bool { return self.flags&bitflags == bitflags }
 
 func (self *EnumRepr) JsonMarshalIsString() bool {
 	return self.flags&jsonMarshalIsString == jsonMarshalIsString
@@ -425,10 +426,6 @@ func (self *EnumRepr) setMarshal(flag Flag, flags uint) error {
 		return fmt.Errorf("Unexpected value %q for %q", flag.Value, flag.Name)
 	}
 	return nil
-}
-
-func (self *EnumRepr) IsBitflag() bool {
-	return self.flags&bitflags == bitflags
 }
 
 func getFlagWord(source string) (_, word string, err error) {
