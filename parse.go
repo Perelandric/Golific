@@ -551,7 +551,7 @@ func genericGatherFlags(cgText string) (string, []Flag, bool, error) {
 				return cgText, flags, false, fmt.Errorf("Expected value after '='")
 			}
 
-			if cgText[0] == '"' || cgText[0] == '\'' {
+			if cgText[0] == '"' || cgText[0] == '\'' || cgText[0] == '`' {
 				var idx = strings.IndexByte(cgText[1:], cgText[0])
 
 				if idx == -1 {
