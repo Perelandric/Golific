@@ -65,42 +65,73 @@ func (self *FileData) DoFile(file string) error {
 }
 
 func (self *FileData) doComment(cg *ast.CommentGroup) {
-	cgText := strings.TrimSpace(cg.Text())
-
-	if !strings.HasPrefix(cgText, "@enum") { // First item must be @enum
-		return
-	}
+	cgText := cg.Text()
 
 	var err error
 	var name string
+	var prefix string
 
 	for {
 		cgText = strings.TrimSpace(cgText)
 
-		var idx = strings.Index(cgText, "@enum")
-		if idx != 0 {
+		if prefix = getPrefix(cgText); prefix == "" {
 			break
 		}
 
-		cgText = cgText[5:] // Strip away the `@enum`
+		cgText = cgText[len(prefix):] // Strip away the `@prefix`
 
 		if len(cgText) == 0 {
-			log.Println("Found @enum with no definition.")
+			log.Printf("Found %s with no definition.\n", prefix)
 			break
 		}
 
-		if cgText, name, err = self.doEnum(cgText); err != nil {
+		var parser func(string) (string, string, error)
+
+		switch prefix {
+		case "@enum":
+			parser = self.doEnum
+		case "@struct":
+			parser = self.doStruct
+		default:
+			log.Fatalf("Unknown prefix %q\n", prefix)
+		}
+
+		if cgText, name, err = parser(cgText); err != nil {
 			if len(name) > 0 {
 				log.Printf("%s: %s\n", name, err)
 			} else {
 				log.Println(err)
 			}
 
-			if idx := strings.Index(cgText, "@enum"); idx == -1 {
+			if idx := nextDescriptor(cgText); idx == -1 {
 				break
+
 			} else {
-				cgText = cgText[idx:] // Slice away everyting until the `@enum`
+				if between := cgText[0:idx]; len(strings.TrimSpace(between)) != 0 {
+					log.Printf("Skipping invalid data in comment: %q\n", between)
+				}
+				cgText = cgText[idx:] // Slice away everyting until the `@prefix`
 			}
 		}
 	}
+}
+
+func getPrefix(cgText string) string {
+	for _, prefix := range [...]string{"@enum", "@struct"} {
+		if strings.HasPrefix(cgText, prefix) {
+			return prefix
+		}
+	}
+	return ""
+}
+
+func nextDescriptor(cgText string) int {
+	for i := 0; i < len(cgText); i++ {
+		if cgText[i] == '@' {
+			if prefix := getPrefix(cgText); prefix != "" {
+				return i
+			}
+		}
+	}
+	return -1
 }
