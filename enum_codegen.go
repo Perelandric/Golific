@@ -7,8 +7,8 @@ import (
 	"text/template"
 )
 
-func (self *EnumData) generateCode() error {
-	if len(self.Reprs) == 0 {
+func (self *FileData) generateEnumCode() error {
+	if len(self.Enums) == 0 {
 		return nil
 	}
 
@@ -35,8 +35,8 @@ func (self *EnumData) generateCode() error {
 }
 
 // If any EnumRepr is `bitflag`, `strings` is needed
-func (self *EnumData) AnyBitflags() bool {
-	for _, repr := range self.Reprs {
+func (self *FileData) AnyBitflags() bool {
+	for _, repr := range self.Enums {
 		if repr.flags&bitflags == bitflags {
 			return true
 		}
@@ -45,8 +45,8 @@ func (self *EnumData) AnyBitflags() bool {
 }
 
 // If any EnumRepr is includes a JSON unmarshaler, `log` is needed
-func (self *EnumData) AnyUnmarshalString() bool {
-	for _, repr := range self.Reprs {
+func (self *FileData) AnyUnmarshalString() bool {
+	for _, repr := range self.Enums {
 		// If we don't dropJson and we are unmarshaling as a string, we need "log"
 		if repr.flags&(dropJson|jsonUnmarshalIsString) == jsonUnmarshalIsString {
 			return true
@@ -56,8 +56,8 @@ func (self *EnumData) AnyUnmarshalString() bool {
 }
 
 // If any EnumRepr is `bitflag`, `strings` is needed
-func (self *EnumData) AnySummary() bool {
-	for _, repr := range self.Reprs {
+func (self *FileData) AnySummary() bool {
+	for _, repr := range self.Enums {
 		if repr.flags&summary == summary {
 			return true
 		}
@@ -84,10 +84,10 @@ import (
 {{- if .AnySummary}}
 /******************************************************************************
 	SUMMARY
-{{range $repr := .Reprs}}
-{{- if $repr.DoSummary}}
-{{$repr.Name}} (type {{printf "%sEnum" $repr.Name}}, {{$repr.GetIntType}})
-{{- range $f := $repr.Fields}}
+{{range $enum := .Enums}}
+{{- if $enum.DoSummary}}
+{{$enum.Name}} (type {{printf "%sEnum" $enum.Name}}, {{$enum.GetIntType}})
+{{- range $f := $enum.Fields}}
 	{{ printf "%s %d %q %q" $f.Name $f.Value $f.String $f.Description -}}
 {{end}}
 {{end -}}
@@ -95,11 +95,11 @@ import (
 ******************************************************************************/
 {{end -}}
 
-{{- range $repr := .Reprs}}
+{{- range $enum := .Enums}}
 {{- $intType := .GetIntType}}
 {{- $uniqField := .GetUniqueName}}
 {{- $self := .GetReceiverName}}
-{{- $variantType := printf "%sEnum" $repr.Name}}
+{{- $variantType := printf "%sEnum" $enum.Name}}
 
 /*****************************
 
@@ -109,7 +109,7 @@ import (
 
 type {{$variantType}} struct{ {{$uniqField}} {{$intType}} }
 
-var {{$repr.Name}} = struct {
+var {{$enum.Name}} = struct {
 	{{- range $f := .Fields}}
 	{{$f.Name}} {{$variantType}}
 	{{- end}}
@@ -123,8 +123,8 @@ var {{$repr.Name}} = struct {
 }
 
 func init() {
-	{{$repr.Name}}.{{.GetIterName}} = [{{len .Fields}}]{{$variantType}}{
-		{{range $f := .Fields}} {{$repr.Name}}.{{$f.Name}},{{end}}
+	{{$enum.Name}}.{{.GetIterName}} = [{{len .Fields}}]{{$variantType}}{
+		{{range $f := .Fields}} {{$enum.Name}}.{{$f.Name}},{{end}}
 	}
 }
 
@@ -171,7 +171,7 @@ func ({{$self}} {{$variantType}}) String() string {
 
 	var vals = make([]string, 0, {{len .Fields}}/2)
 
-	for _, item := range {{$repr.Name}}.{{.GetIterName}} {
+	for _, item := range {{$enum.Name}}.{{.GetIterName}} {
 		if {{$self}}.{{$uniqField}} & item.{{$uniqField}} == item.{{$uniqField}} {
 			vals = append(vals, item.String())
 		}
@@ -194,9 +194,9 @@ func ({{$self}} {{$variantType}}) Description() string {
   return ""
 }
 
-{{if $repr.DoJson -}}
+{{if $enum.DoJson -}}
 // JSON marshaling methods
-{{if $repr.JsonMarshalIsString -}}
+{{if $enum.JsonMarshalIsString -}}
 func ({{$self}} {{$variantType}}) MarshalJSON() ([]byte, error) {
   return []byte(strconv.Quote({{$self}}.String())), nil
 }
@@ -206,7 +206,7 @@ func ({{$self}} {{$variantType}}) MarshalJSON() ([]byte, error) {
 }
 {{- end}}
 
-{{if $repr.JsonUnmarshalIsString -}}
+{{if $enum.JsonUnmarshalIsString -}}
 func ({{$self}} *{{$variantType}}) UnmarshalJSON(b []byte) error {
 	var s, err = strconv.Unquote(string(b))
 	if err != nil {
@@ -260,7 +260,7 @@ func ({{$self}} *{{$variantType}}) UnmarshalJSON(b []byte) error {
 {{- end}}
 {{- end}}
 
-{{if $repr.DoXml -}}
+{{if $enum.DoXml -}}
 
 {{- end}}
 
