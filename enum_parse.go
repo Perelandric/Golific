@@ -21,6 +21,7 @@ const (
 )
 
 type EnumRepr struct {
+	BaseRepr
 	Name string
 
 	flags    uint
@@ -31,6 +32,7 @@ type EnumRepr struct {
 }
 
 type EnumFieldRepr struct {
+	BaseFieldRepr
 	Name        string
 	String      string
 	Description string
@@ -171,13 +173,9 @@ func (self *EnumRepr) doFields(cgText string) (_ string, err error) {
 }
 
 func (self *EnumRepr) gatherFlags(cgText string) (string, error) {
-	cgText, flags, foundNewline, err := genericGatherFlags(cgText)
+	cgText, flags, _, err := self.genericGatherFlags(cgText, false)
 	if err != nil {
 		return cgText, err
-	}
-
-	if foundNewline == false {
-		return cgText, fmt.Errorf("Expected line break after last descriptor flag")
 	}
 
 	for _, flag := range flags {
@@ -274,25 +272,10 @@ func (self *EnumRepr) gatherFlags(cgText string) (string, error) {
 	return cgText, nil
 }
 
-func (self *EnumRepr) doBooleanFlag(flag Flag, toSet uint) error {
-	if !flag.FoundEqual || flag.Value == "true" {
-		self.flags |= toSet
-	} else if flag.Value == "false" {
-		self.flags &^= toSet
-	} else {
-		return fmt.Errorf("Invalid value %q for %q", flag.Value, flag.Name)
-	}
-	return nil
-}
-
 func (self *EnumFieldRepr) gatherFlags(cgText string) (string, error) {
-	cgText, flags, foundNewline, err := genericGatherFlags(cgText)
+	cgText, flags, _, err := self.genericGatherFlags(cgText, true)
 	if err != nil {
 		return cgText, err
-	}
-
-	if len(cgText) > 0 && !foundNewline {
-		return cgText, fmt.Errorf("Expected line break after variant definition")
 	}
 
 	for _, flag := range flags {

@@ -68,8 +68,7 @@ func (self *FileData) doComment(cg *ast.CommentGroup) {
 	cgText := cg.Text()
 
 	var err error
-	var name string
-	var prefix string
+	var name, prefix string
 
 	for {
 		cgText = strings.TrimSpace(cgText)

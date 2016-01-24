@@ -13,6 +13,28 @@ type Flag struct {
 	FoundEqual bool
 }
 
+type Base struct {
+	flags uint
+}
+
+func (self *Base) doBooleanFlag(flag Flag, toSet uint) error {
+	if !flag.FoundEqual || flag.Value == "true" {
+		self.flags |= toSet
+	} else if flag.Value == "false" {
+		self.flags &^= toSet
+	} else {
+		return fmt.Errorf("Invalid value %q for %q", flag.Value, flag.Name)
+	}
+	return nil
+}
+
+type BaseRepr struct {
+	Base
+}
+type BaseFieldRepr struct {
+	Base
+}
+
 func getFlagWord(source string) (_, word string, err error) {
 	var n = 0
 
@@ -96,7 +118,9 @@ func trimLeftCheckNewline(s string) (string, bool) {
 	return s[n:], found
 }
 
-func genericGatherFlags(cgText string) (string, []Flag, bool, error) {
+func (self Base) genericGatherFlags(
+	cgText string, possibleEnd bool) (string, []Flag, bool, error) {
+
 	var flags = make([]Flag, 0)
 	var foundNewline bool
 	var err error
@@ -160,5 +184,9 @@ func genericGatherFlags(cgText string) (string, []Flag, bool, error) {
 		flags = append(flags, f)
 	}
 
-	return cgText, flags, foundNewline, nil
+	if !foundNewline && (!possibleEnd || len(cgText) > 0) {
+		err = fmt.Errorf("Expected line break.")
+	}
+
+	return cgText, flags, foundNewline, err
 }
