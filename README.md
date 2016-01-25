@@ -65,7 +65,7 @@ for _, animal := range Animal.Values {
 }
 ```
 
-**Please note:** This will create a new file with the same name as the original, except that it will have the prefix `enum____` added, so if your file is `animal.go`, the file `enum____animal.go` will be created, ***overwriting*** any existing file.
+**Please note:** This will create a new file with the same name as the original, except that it will have the prefix `golific____` added, so if your file is `animal.go`, the file `golific____animal.go` will be created, ***overwriting*** any existing file.
 
 # FAQ
 ###General
