@@ -43,6 +43,15 @@ func {{$struct.GetCtorName}}() *{{$struct.Name}} {
 }
 {{end -}}
 
+type {{$struct.Name}} struct {
+  private {{$privateType}}
+  {{- range $f := $struct.Fields}}
+  {{- if $f.IsPublic}}
+  {{$f.Name}} {{$f.Type}} ` + "`" + `{{$f.Tag}}` + "`" + `
+  {{- end -}}
+  {{end -}}
+}
+
 type {{$privateType}} struct {
   {{- range $f := $struct.Fields}}
   {{- if $f.IsPrivate -}}
@@ -53,15 +62,6 @@ type {{$privateType}} struct {
 
 type {{$jsonType}} struct {
   *{{- $privateType}}
-  {{- range $f := $struct.Fields}}
-  {{- if $f.IsPublic}}
-  {{$f.Name}} {{$f.Type}} ` + "`" + `{{$f.Tag}}` + "`" + `
-  {{- end -}}
-  {{end -}}
-}
-
-type {{$struct.Name}} struct {
-  private {{$privateType}}
   {{- range $f := $struct.Fields}}
   {{- if $f.IsPublic}}
   {{$f.Name}} {{$f.Type}} ` + "`" + `{{$f.Tag}}` + "`" + `
@@ -94,8 +94,8 @@ func (self *{{$struct.Name}}) {{$f.Write}} ( v {{$f.Type}} ) {
 func (self *{{$struct.Name}}) MarshalJSON() ([]byte, error) {
   return json.Marshal({{$jsonType}} {
     &self.private,
-    {{- range $f := $struct.Fields}}
-    {{- if $f.IsPublic -}}
+    {{range $f := $struct.Fields -}}
+    {{if $f.IsPublic -}}
     self.{{$f.Name}},
     {{end -}}
     {{end -}}

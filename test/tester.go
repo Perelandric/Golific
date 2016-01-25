@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-//go:generate GoEnum $GOFILE
+//go:generate Golific $GOFILE
 
 /*
 @enum Foo --bitflags --bitflag_separator="," --iterator_name="foobar" --json=string --summary
