@@ -4,7 +4,7 @@
 
 ## &#64;struct
 
-**&#64;struct** is used as an alternate syntax for generating `struct` types, providing the abilitly to generate getter and setters, a default constructor with default values and the ability to keep private fields private yet still be able to marshal and unmarshal JSON.
+**&#64;struct** is used as an alternate syntax for generating `struct` types, providing the ability to generate getter and setters, a default constructor with default values and the ability to keep private fields private yet still be able to marshal and unmarshal JSON.
 
 *(docs are forthcoming)*
 
