@@ -1,4 +1,12 @@
-# GoEnum
+# Golific
+
+**Golific** is a set of tools to generate Go code using the `go:generate` tool. Currently there are two commands: `&#64;struct` and `&#64;enum`. See descriptions below.
+
+## &#64;struct
+
+*(docs are forthcoming)*
+
+## &#64;enum
 
 **GoEnum** works with the `generate` command to create namespaced enums using structs, providing greater type safety as well as offering several other features.
 
