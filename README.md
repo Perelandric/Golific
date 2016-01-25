@@ -1,14 +1,16 @@
 # Golific
 
-**Golific** is a set of tools to generate Go code using the `go:generate` tool. Currently there are two commands: `&#64;struct` and `&#64;enum`. See descriptions below.
+**Golific** is a tool for generating Go code using the `go:generate` tool. Currently there are two types of annotations: **&#64;struct** and **&#64;enum**. See descriptions below.
 
 ## &#64;struct
+
+**&#64;struct** is used as an alternate syntax for generating `struct` types, providing the abilitly to generate getter and setters, a default constructor with default values and the ability to keep private fields private yet still be able to marshal and unmarshal JSON.
 
 *(docs are forthcoming)*
 
 ## &#64;enum
 
-**GoEnum** works with the `generate` command to create namespaced enums using structs, providing greater type safety as well as offering several other features.
+**&#64;enum** is used to create namespaced enums using structs, providing greater type safety and offering several other features.
 
 # Quick start
 
