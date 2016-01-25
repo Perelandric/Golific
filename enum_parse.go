@@ -178,16 +178,14 @@ func (self *EnumRepr) gatherFlags(cgText string) (string, error) {
 			}
 
 		case "bitflag_separator": // The separator used when joining bitflags
-			if !flag.FoundEqual || len(flag.Value) == 0 {
-				return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
+			if self.FlagSep, err = flag.getNonEmpty(); err != nil {
+				return cgText, err
 			}
-			self.FlagSep = flag.Value
 
 		case "iterator_name": // Custom Name for Array of values
-			if !flag.FoundEqual || !isIdent(flag.Value) {
-				return cgText, fmt.Errorf("%q requires a valid identifier", flag.Name)
+			if self.iterName, err = flag.getIdent(); err != nil {
+				return cgText, err
 			}
-			self.iterName = flag.Value
 
 		case "summary": // Include a summary of this enum at the top of the file
 			if err = self.doBooleanFlag(flag, summary); err != nil {
@@ -195,52 +193,33 @@ func (self *EnumRepr) gatherFlags(cgText string) (string, error) {
 			}
 
 		case "json": // Set type of JSON marshaler and unmarshaler
-			if !flag.FoundEqual || len(flag.Value) == 0 {
-				return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
-			}
 			err = self.setMarshal(flag, jsonMarshalIsString|jsonUnmarshalIsString)
 			if err != nil {
 				return cgText, err
 			}
 			/*
 				case "xml": // Set type of XML marshaler and unmarshaler
-					if !flag.FoundEqual || len(flag.Value) == 0 {
-						return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
-					}
 					err = self.setMarshal(flag, xmlMarshalIsString|xmlUnmarshalIsString)
 					if err != nil {
 						return cgText, err
 					}
 			*/
 		case "json_marshal": // Set type of JSON marshaler
-			if !flag.FoundEqual || len(flag.Value) == 0 {
-				return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
-			}
-			err = self.setMarshal(flag, jsonMarshalIsString)
-			if err != nil {
+			if err = self.setMarshal(flag, jsonMarshalIsString); err != nil {
 				return cgText, err
 			}
 
 		case "json_unmarshal": // Set type of JSON unmarshaler
-			if !flag.FoundEqual || len(flag.Value) == 0 {
-				return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
-			}
 			if err = self.setMarshal(flag, jsonUnmarshalIsString); err != nil {
 				return cgText, err
 			}
 			/*
 				case "xml_marshal": // Set type of XML marshaler
-					if !flag.FoundEqual || len(flag.Value) == 0 {
-						return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
-					}
 					if err = self.setMarshal(flag, xmlMarshalIsString); err != nil {
 						return cgText, err
 					}
 
 				case "xml_unmarshal": // Set type of XML unmarshaler
-					if !flag.FoundEqual || len(flag.Value) == 0 {
-						return cgText, fmt.Errorf("%q requires a non-empty value", flag.Name)
-					}
 					if err = self.setMarshal(flag, xmlUnmarshalIsString); err != nil {
 						return cgText, err
 					}
@@ -273,20 +252,18 @@ func (self *EnumFieldRepr) gatherFlags(cgText string) (string, error) {
 		switch strings.ToLower(flag.Name) {
 
 		case "string": // The string representation of the field
-			if !flag.FoundEqual {
-				return cgText, fmt.Errorf("Expected value after %q", flag.Name)
+			if self.String, err = flag.getWithEqualSign(); err != nil {
+				return cgText, err
 			}
-			self.String = flag.Value
 
 		case "description": // The description of the field
-			if !flag.FoundEqual {
-				return cgText, fmt.Errorf("Expected value after %q", flag.Name)
+			if self.Description, err = flag.getWithEqualSign(); err != nil {
+				return cgText, err
 			}
-			self.Description = flag.Value
 
 		case "value": // Custom value for the field
-			if !flag.FoundEqual {
-				return cgText, fmt.Errorf("Expected value after %q", flag.Name)
+			if _, err = flag.getWithEqualSign(); err != nil {
+				return cgText, err
 			}
 
 			if n, err := strconv.ParseUint(flag.Value, 10, 32); err != nil {
@@ -304,6 +281,9 @@ func (self *EnumFieldRepr) gatherFlags(cgText string) (string, error) {
 }
 
 func (self *EnumRepr) setMarshal(flag Flag, flags uint) error {
+	if _, err := flag.getNonEmpty(); err != nil {
+		return err
+	}
 	switch strings.ToLower(flag.Value) {
 	case "string":
 		self.flags |= flags

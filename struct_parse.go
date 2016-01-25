@@ -10,6 +10,7 @@ import (
 const (
 	read = 1 << iota
 	write
+	dropCtor
 )
 
 type StructRepr struct {
@@ -21,26 +22,35 @@ type StructRepr struct {
 
 type StructFieldRepr struct {
 	BaseFieldRepr
-	Name  string // Field name
-	Type  string // Field data type
-	Tag   string // Typical struct field tags
-	Read  string // Method name for reads
-	Write string // Method name for writes
+	Name        string // Field name
+	Type        string // Field data type
+	Tag         string // Typical struct field tags
+	Read        string // Method name for reads
+	Write       string // Method name for writes
+	DefaultExpr string // Default expression
 }
 
 func (self *StructRepr) GetPrivateTypeName() string {
 	return "private_" + self.getUniqueId()
 }
-
 func (self *StructRepr) GetJSONTypeName() string {
 	return "json_" + self.getUniqueId()
 }
+func (self *StructRepr) GetCtorName() string {
+	if len(self.Constructor) == 0 {
+		return "New" + strings.Title(self.Name)
+	}
+	return self.Constructor
+}
 
-func (self *StructRepr) DoCtor() bool { return len(self.Constructor) > 0 }
+func (self *StructRepr) DoCtor() bool { return self.flags&dropCtor == 0 }
 func (self *StructRepr) DoJson() bool { return self.flags&dropJson == 0 }
 
 func (self *StructFieldRepr) DoRead() bool  { return len(self.Read) > 0 }
 func (self *StructFieldRepr) DoWrite() bool { return len(self.Write) > 0 }
+func (self *StructFieldRepr) DoDefaultExpr() bool {
+	return len(self.DefaultExpr) > 0
+}
 
 func (self *StructFieldRepr) IsPrivate() bool {
 	return self.flags&(read|write) != (read | write)
@@ -71,6 +81,10 @@ func (self *FileData) doStruct(cgText string) (string, string, error) {
 
 	if cgText, err = strct.gatherFlags(cgText); err != nil {
 		return cgText, strct.Name, err
+	}
+
+	if strct.flags&dropCtor == dropCtor && len(strct.Constructor) > 0 {
+		log.Printf("WARNING: %q: found --drop_ctor and --ctor_name\n", strct.Name)
 	}
 
 	if cgText, err = strct.doFields(cgText); err != nil {
@@ -153,6 +167,16 @@ func (self *StructRepr) gatherFlags(cgText string) (string, error) {
 				return cgText, err
 			}
 
+		case "drop_ctor": // Do not generate default constructor function
+			if err = self.doBooleanFlag(flag, dropCtor); err != nil {
+				return cgText, err
+			}
+
+		case "ctor_name": // Custom name for the default constructor
+			if self.Constructor, err = flag.getIdent(); err != nil {
+				return cgText, err
+			}
+
 		default:
 			return cgText, fmt.Errorf("Unknown flag %q", flag.Name)
 		}
@@ -162,7 +186,6 @@ func (self *StructRepr) gatherFlags(cgText string) (string, error) {
 }
 
 func (self *StructFieldRepr) gatherFlags(cgText string) (string, error) {
-	const errValidId = "%s method name must be a valid identifier."
 	const warnExported = "WARNING: The %s method %q is not exported.\n"
 
 	cgText, flags, _, err := self.genericGatherFlags(cgText, true)
@@ -174,34 +197,37 @@ func (self *StructFieldRepr) gatherFlags(cgText string) (string, error) {
 		switch strings.ToLower(flag.Name) {
 
 		case "tags": // Typical struct field tags
-			if !flag.FoundEqual {
-				return cgText, fmt.Errorf("%q is meant to have a value", flag.Name)
+			if self.Tag, err = flag.getWithEqualSign(); err != nil {
+				return cgText, err
 			}
-			self.Tag = flag.Value
 
 		case "read": // Set read access
 			self.flags |= read
-			self.Read = flag.Value
-			if len(flag.Value) > 0 {
-				if !isIdent(flag.Value) {
-					return cgText, fmt.Errorf(errValidId, flag.Name)
-
-				} else if isExportedIdent(flag.Value) == false {
+			if flag.FoundEqual {
+				if self.Read, err = flag.getIdent(); err != nil {
+					return cgText, err
+				}
+				if isExportedIdent(flag.Value) == false {
 					log.Printf(warnExported, flag.Name, flag.Value)
 				}
 			}
 
 		case "write": // Set write access
 			self.flags |= write
-			self.Write = flag.Value
-			if len(flag.Value) > 0 {
-				if !isIdent(flag.Value) {
-					return cgText, fmt.Errorf(errValidId, flag.Name)
-
-				} else if isExportedIdent(flag.Value) == false {
+			if flag.FoundEqual {
+				if self.Write, err = flag.getIdent(); err != nil {
+					return cgText, err
+				}
+				if isExportedIdent(flag.Value) == false {
 					log.Printf(warnExported, flag.Name, flag.Value)
 				}
 			}
+
+		case "default_expr": // Set default expression
+			if self.DefaultExpr, err = flag.getNonEmpty(); err != nil {
+				return cgText, err
+			}
+			// TODO: Should I parse the expression here? Use the formatter to verify?
 
 		default:
 			return cgText, fmt.Errorf("Unknown flag %q", flag.Name)

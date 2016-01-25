@@ -15,7 +15,7 @@ import (
 
 func main() {
 	log.SetFlags(0)
-	log.SetPrefix("enum: ")
+	log.SetPrefix("golific: ")
 
 	rand.Seed(time.Now().UnixNano())
 
@@ -54,7 +54,7 @@ func (self *FileData) DoFile(file string) error {
 
 	var dir, filename = filepath.Split(file)
 
-	self.File = filepath.Join(dir, "enum____"+filename)
+	self.File = filepath.Join(dir, "golific____"+filename)
 
 	for _, cg := range f.Comments {
 		self.doComment(cg)
@@ -91,8 +91,10 @@ func (self *FileData) doComment(cg *ast.CommentGroup) {
 
 		switch prefix {
 		case "@enum":
+			log.SetPrefix("golific-enum: ")
 			parser = self.doEnum
 		case "@struct":
+			log.SetPrefix("golific-struct: ")
 			parser = self.doStruct
 		default:
 			log.Fatalf("Unknown prefix %q\n", prefix)

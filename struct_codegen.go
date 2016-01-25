@@ -24,6 +24,25 @@ var struct_tmpl = `
 
 ******************************/
 
+{{- if $struct.DoCtor}}
+func {{$struct.GetCtorName}}() *{{$struct.Name}} {
+  return &{{$struct.Name}} {
+    private: {{$privateType}} {
+      {{range $f := $struct.Fields}}
+      {{- if and $f.IsPrivate $f.DoDefaultExpr -}}
+      {{printf "%s: %s," $f.Name $f.DefaultExpr}}
+      {{end -}}
+      {{end -}}
+    },
+    {{range $f := $struct.Fields}}
+    {{- if and $f.IsPublic $f.DoDefaultExpr -}}
+    {{printf "%s: %s," $f.Name $f.DefaultExpr}}
+    {{end -}}
+    {{end}}
+  }
+}
+{{end -}}
+
 type {{$privateType}} struct {
   {{- range $f := $struct.Fields}}
   {{- if $f.IsPrivate -}}

@@ -20,6 +20,27 @@ type Base struct {
 	unique string
 }
 
+func (self *Flag) getWithEqualSign() (string, error) {
+	if !self.FoundEqual {
+		return self.Value,
+			fmt.Errorf("%q expects an '=' followed by a (possibly empty) value",
+				self.Name)
+	}
+	return self.Value, nil
+}
+func (self *Flag) getNonEmpty() (string, error) {
+	if !self.FoundEqual || len(self.Value) == 0 {
+		return self.Value, fmt.Errorf("%q requires a non-empty value", self.Name)
+	}
+	return self.Value, nil
+}
+func (self *Flag) getIdent() (string, error) {
+	if isIdent(self.Value) {
+		return self.Value, nil
+	}
+	return self.Value, fmt.Errorf("%q requires a valid identifier", self.Name)
+}
+
 func (self *Base) getUniqueId() string {
 	if self.unique == "" {
 		self.unique = strconv.FormatInt(rand.Int63(), 36)

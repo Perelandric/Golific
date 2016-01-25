@@ -30,9 +30,9 @@ Horse --string=horsie --description="Everyone loves horses."
 /*
 @struct Tester
 	Test1 string
-	Test2 string --read
+	Test2 string --read --default_expr=`"foo"`
 	Test3 string --write
-	Test4 string --read --write
+	Test4 string --read --write --default_expr=`"bar"`
 	Test5 string --read --write
 */
 
