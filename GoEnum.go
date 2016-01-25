@@ -19,7 +19,9 @@ func main() {
 
 	rand.Seed(time.Now().UnixNano())
 
-	var data FileData
+	var data = FileData{
+		Imports: make(map[string]bool, 3),
+	}
 
 	for _, file := range os.Args[1:] {
 		fmt.Printf("Processing file: %q\n", file)
@@ -34,6 +36,7 @@ type FileData struct {
 	File    string
 	Enums   []*EnumRepr
 	Structs []*StructRepr
+	Imports map[string]bool
 }
 
 func (self *FileData) DoFile(file string) error {
@@ -57,7 +60,7 @@ func (self *FileData) DoFile(file string) error {
 		self.doComment(cg)
 	}
 
-	if err := self.generateEnumCode(); err != nil {
+	if err := self.generateCode(); err != nil {
 		return err
 	}
 

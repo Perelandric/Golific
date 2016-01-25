@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"strconv"
 	"strings"
 	"unicode"
@@ -22,12 +21,9 @@ const (
 
 type EnumRepr struct {
 	BaseRepr
-	Name string
-
-	flags    uint
+	Name     string
 	FlagSep  string
 	iterName string
-	unique   string
 	Fields   []*EnumFieldRepr
 }
 
@@ -40,10 +36,7 @@ type EnumFieldRepr struct {
 }
 
 func (self *EnumRepr) GetUniqueName() string {
-	if self.unique == "" {
-		self.unique = "value_" + strconv.FormatInt(rand.Int63(), 36)
-	}
-	return self.unique
+	return "value_" + self.getUniqueId()
 }
 
 func (self *EnumRepr) GetReceiverName() string {
@@ -121,13 +114,12 @@ func (self *FileData) doEnum(cgText string) (string, string, error) {
 }
 
 func (self *EnumRepr) doFields(cgText string) (_ string, err error) {
-	for len(cgText) > 0 && !strings.HasPrefix(cgText, "@enum") {
+	for len(cgText) > 0 && getPrefix(cgText) == "" {
 		var f = EnumFieldRepr{
 			Value: -1,
 		}
 
-		cgText, f.Name, err = getIdent(cgText)
-		if err != nil {
+		if cgText, f.Name, err = getIdent(cgText); err != nil {
 			return cgText, err
 		}
 
@@ -137,8 +129,7 @@ func (self *EnumRepr) doFields(cgText string) (_ string, err error) {
 					"`--iterator_name=SomeOtherIdent` to resolve the conflict.", f.Name)
 		}
 
-		cgText, err = f.gatherFlags(cgText)
-		if err != nil {
+		if cgText, err = f.gatherFlags(cgText); err != nil {
 			return cgText, err
 		}
 

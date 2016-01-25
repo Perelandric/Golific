@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -14,7 +16,15 @@ type Flag struct {
 }
 
 type Base struct {
-	flags uint
+	flags  uint
+	unique string
+}
+
+func (self *Base) getUniqueId() string {
+	if self.unique == "" {
+		self.unique = strconv.FormatInt(rand.Int63(), 36)
+	}
+	return self.unique
 }
 
 func (self *Base) doBooleanFlag(flag Flag, toSet uint) error {
@@ -77,6 +87,28 @@ func getIdent(source string) (_, ident string, err error) {
 	return source[n:], source[:n], nil
 }
 
+func getType(source string) (_, typ string, err error) {
+	source = strings.TrimSpace(source)
+
+	if len(source) == 0 {
+		return "", "", fmt.Errorf("Invalid type: %q", "")
+	}
+
+	var n = 0
+	var a string
+
+	if source[0] == '*' {
+		n += 1
+		source = source[1:]
+		a = "*"
+	}
+
+	if source, typ, err = getIdent(source); err != nil {
+		return "", "", err
+	}
+	return source, a + typ, nil
+}
+
 func isIdent(word string) bool {
 	if len(word) == 0 {
 		return false
@@ -87,6 +119,20 @@ func isIdent(word string) bool {
 		}
 	}
 	return true
+}
+
+func isExportedIdent(word string) bool {
+	return isIdent(word) && ('A' <= word[0] && word[0] <= 'Z')
+}
+
+func isValidType(word string) bool {
+	if len(word) == 0 {
+		return false
+	}
+	if word[0] == '*' {
+		return isIdent(word[1:])
+	}
+	return isIdent(word)
 }
 
 func isIdentRune(i int, r rune) bool {

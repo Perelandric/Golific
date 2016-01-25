@@ -27,6 +27,15 @@ Cat --string=kitty --description="Your best friend, but doesn't always show it."
 Horse --string=horsie --description="Everyone loves horses."
 */
 
+/*
+@struct Tester
+	Test1 string
+	Test2 string --read
+	Test3 string --write
+	Test4 string --read --write
+	Test5 string --read --write
+*/
+
 type tester struct {
 	F FooEnum
 	O OofEnum
