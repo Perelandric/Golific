@@ -8,7 +8,7 @@ import (
 )
 
 func (self *FileData) generateCode() error {
-	if len(self.Enums) == 0 {
+	if len(self.Enums) == 0 && len(self.Structs) == 0 {
 		return nil
 	}
 
