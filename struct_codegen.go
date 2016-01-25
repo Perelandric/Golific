@@ -41,7 +41,7 @@ func {{$struct.GetCtorName}}() *{{$struct.Name}} {
     {{end}}
   }
 }
-{{end -}}
+{{end}}
 
 type {{$struct.Name}} struct {
   private {{$privateType}}
