@@ -136,46 +136,33 @@ Notice that there's no space between `//` and `go:generate`. This is required fo
 
 ###Enum descriptor syntax
 
-The actual Enum descriptors are defined entirely in code comment blocks at the top-level namespace of your code. A comment block is either a `/* multi line comment */` or several adjacent `// single line comments`. Comment lines that are empty or have only whitespace are ignored.
+The actual Enum descriptors are defined entirely in `/* multi-line code comments */` at the top-level scope of your code. Comment lines that are empty or have only whitespace are ignored.
 
 The comment block must begin with `@enum` followed by an identifier, which provides the name that will be used to reference your enum as well as the type of the variants *(to which the word "Enum" will be added)*.
 
-Multiple enum descriptors may be defined in a single comment block, where `@enum` at the beginning of a line marks the start of a new enum.
+Multiple enum descriptors may be defined within a single comment, where `@enum` at the beginning of a line marks the start of a new enum.
 
-The beginning of a descriptor can look like either of these *(incomplete)* examples:
+The beginning of a descriptor can look like this *(incomplete)* example:
 
 ``` go
 /*
 @enum Animal
 */
 ```
-``` go
-//
-// @enum Animal
-```
 
-In both cases we define an enum named `Animal`. This will create a `var Animal` and a `type AnimalEnum struct {...}` in the generated file, so these names must be available to avoid conflicts, and the name you provide must be a valid identifier. As usual, the capitalization determines whether or not the items are exported, so `animal` could be used instead of `Animal`.
-
-Notice that both have an empty line above the `@enum Animal`. This is fine since empty or whitespace-only comment lines are ignored.
+Here we started to define an enum named `Animal`. This will create a `var Animal` and a `type AnimalEnum struct {...}` in the generated file, so these names must be available to avoid conflicts, and the name you provide must be a valid identifier. As usual, the capitalization determines whether or not the items are exported, so `animal` could be used instead of `Animal`.
 
 #####*Descriptor flags*
 
-Next is the set of descriptor flags. These flags begin with `--` and are followed by a word and in some cases an `=` with a value. Flags must be separated by at least 1 white space, and can optionally be defined on separate lines as seen in these *(still incomplete)* examples.
+Next is the set of descriptor flags. These flags begin with `--` and are followed by a word and in some cases an `=` with a value. Flags must be separated by at least 1 white space, and can optionally be defined on separate lines as seen in this *(still incomplete)* example.
 
 ``` go
 /*
 @enum Animal --json="string"
 */
 ```
-``` go
-//
-// @enum Animal
-// --json=string
-```
 
-Notice two differences in the above examples.
- - The first one uses quotes around `string`, and the second does not. As long as the value does not contain space characters, the quotation marks are optional. Single quotes (`'`), double quotes (`"`) or backticks (`&#96`) may be used.
- - The first one begins its flags on the same line as the `@enum`, and the second starts on the next line. Either way is valid.
+Notice it uses quotes around `string`. These are optional as long as the value does not contain space characters. Single quotes (`'`), double quotes (`"`) or backticks (`&#96`) may be used. Flags may be on the same line and/or on subsequent lines.
 
 All flags are optional, and are described in the tables below.
 
@@ -183,7 +170,7 @@ All flags are optional, and are described in the tables below.
 
 After the descriptor flags have been defined, you'll need to define the enum variants. At least one variant is required per enum. Again, the flags may be defined on the same line or on different lines.
 
-Adding to the examples above, they may now look like this:
+Adding to the example above, it may now look like this:
 
 ``` go
 /*
@@ -193,16 +180,8 @@ Cat --string=kitty --description="Your best friend, but doesn't always show it."
 Horse --string=horsie --description="Everyone loves horses."
 */
 ```
-``` go
-//
-// @enum Animal
-// --json=string
-// Dog --string=doggie --description="Your best friend, and you know it."
-// Cat --string=kitty --description="Your best friend, but doesn't always show it."
-// Horse --string=horsie --description="Everyone loves horses."
-```
 
-So our examples are now fully valid enum descriptors.
+So our example is now a fully valid enum descriptor.
 
 ###Using the `generate` command
 

@@ -57,7 +57,11 @@ func (self *FileData) DoFile(file string) error {
 	self.File = filepath.Join(dir, "golific____"+filename)
 
 	for _, cg := range f.Comments {
-		self.doComment(cg)
+		for _, c := range cg.List {
+			if strings.HasPrefix(c.Text, "/*") {
+				self.doComment(c)
+			}
+		}
 	}
 
 	if err := self.generateCode(); err != nil {
@@ -67,8 +71,8 @@ func (self *FileData) DoFile(file string) error {
 	return nil
 }
 
-func (self *FileData) doComment(cg *ast.CommentGroup) {
-	cgText := cg.Text()
+func (self *FileData) doComment(c *ast.Comment) {
+	cgText := c.Text
 
 	var err error
 	var name, prefix string
