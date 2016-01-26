@@ -68,6 +68,12 @@ func (self *StructFieldRepr) GetSpaceAndTag() string {
 	return ""
 }
 
+// embedded fields use the `.Name` to store the embedded type. Since the type
+// also serves as a name, the leading '*' may need to be stripped away.
+func (self *StructFieldRepr) GetNameMaybeType() string {
+	return strings.TrimLeft(self.Name, "*")
+}
+
 func (self *FileData) doStruct(cgText string) (string, string, error) {
 	strct := StructRepr{}
 
@@ -106,31 +112,30 @@ func (self *FileData) doStruct(cgText string) (string, string, error) {
 }
 
 func (self *StructRepr) doFields(cgText string) (_ string, err error) {
+
 	for len(cgText) > 0 && getPrefix(cgText) == "" {
 		var f = StructFieldRepr{}
-		var foundNewline, foundStr bool
+		var leadingNewline, foundStr, isEmbedded, wasQuote bool
 
 		if cgText, f.Name, err = getIdentOrType(cgText); err != nil {
 			return cgText, err
 		}
 
-		if cgText, f.Tag, foundStr, foundNewline, err = getString(cgText, false); err != nil {
-			return cgText, err
-		}
-		if foundStr || foundNewline {
+		// Check if the field is embedded (next is `--`, newline or quote)
+		if cgText, isEmbedded, wasQuote = checkEmbedded(cgText); isEmbedded {
 			f.flags |= embedded
 			self.Fields = append(self.Fields, &f)
-			if foundNewline {
-				continue
-			}
-		}
 
-		if cgText, foundNewline, err = f.gatherEmbeddedFlags(cgText); err != nil {
-			return cgText, err
-		}
-		if foundNewline {
-			f.flags |= embedded
-			self.Fields = append(self.Fields, &f)
+			if wasQuote { // Was a quote, so gather the field tag
+				if cgText, f.Tag, _, _, err = getString(cgText, false); err != nil {
+					return cgText, err
+				}
+			}
+			// Now gather flags (if any)
+			if cgText, err = f.gatherEmbeddedFlags(cgText); err != nil {
+				return cgText, err
+			}
+
 			continue
 		}
 
@@ -149,19 +154,14 @@ func (self *StructRepr) doFields(cgText string) (_ string, err error) {
 			return cgText, err
 		}
 
-		// A linebreak here means this field is done. This is necessary before the
-		// `getString()` call.
-		if cgText, foundNewline = trimLeftCheckNewline(cgText); foundNewline {
-			self.Fields = append(self.Fields, &f)
-			continue
-		}
-
 		// See if there's a tag.
-		if cgText, f.Tag, _, foundNewline, err = getString(cgText, false); err != nil {
+		cgText, f.Tag, foundStr, leadingNewline, err = getString(cgText, false)
+		if err != nil {
 			return cgText, err
 		}
-		if foundNewline {
-			continue
+
+		if leadingNewline && foundStr { // The string was on the next line
+			return cgText, fmt.Errorf("Found string; expected flags or field name")
 		}
 
 		if cgText, err = f.gatherFlags(cgText); err != nil {
@@ -229,23 +229,24 @@ func (self *StructRepr) gatherFlags(cgText string) (string, error) {
 	return cgText, nil
 }
 
+func checkEmbedded(cgText string) (_ string, isEmbed, wasQuote bool) {
+	temp, isEmbed := trimLeftCheckNewline(cgText)
+
+	if isEmbed || len(temp) == 0 || strings.HasPrefix(temp, "--") {
+		return cgText, true, false
+	}
+	if temp[0] == '`' || temp[0] == '"' {
+		return temp, true, true
+	}
+	return temp, false, false
+}
+
 func (self *StructFieldRepr) gatherEmbeddedFlags(
-	cgText string) (string, bool, error) {
-
-	// If there's a newline, we have an embedded field
-	cgText, foundNewline := trimLeftCheckNewline(cgText)
-	if foundNewline {
-		return cgText, true, nil
-	}
-
-	// If there's no leading `--` (and no newline, see above), it's not embedded
-	if strings.HasPrefix(cgText, "--") == false {
-		return cgText, false, nil
-	}
+	cgText string) (_ string, err error) {
 
 	cgText, flags, _, err := self.genericGatherFlags(cgText, true)
 	if err != nil {
-		return cgText, false, err
+		return cgText, err
 	}
 
 	for _, flag := range flags {
@@ -253,16 +254,16 @@ func (self *StructFieldRepr) gatherEmbeddedFlags(
 
 		case "default_expr": // Set default expression
 			if self.DefaultExpr, err = flag.getNonEmpty(); err != nil {
-				return cgText, false, err
+				return cgText, err
 			}
 			// TODO: Should I parse the expression here? Use the formatter to verify?
 
 		default:
-			return cgText, false, fmt.Errorf("Unknown flag %q for embedded field", flag.Name)
+			return cgText, fmt.Errorf("Unknown flag %q for embedded field", flag.Name)
 		}
 	}
 
-	return cgText, true, nil
+	return cgText, nil
 }
 
 func (self *StructFieldRepr) gatherFlags(cgText string) (string, error) {

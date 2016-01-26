@@ -30,12 +30,13 @@ Horse --string=horsie --description="Everyone loves horses."
 
 /*
 @struct Tester
-	AnimalEnum --default_expr="Animal.Dog"
+	*AnimalEnum --default_expr="&Animal.Dog"
 	Test1 string `json:"test1"`
 	Test2 string --read --default_expr=`"foo"`
 	Test3 string --write
 	Test4 string --read --write --default_expr=`"bar"`
 	Test5 string --read --write
+	*FooEnum "whatever"
 */
 
 type tester struct {

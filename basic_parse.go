@@ -194,8 +194,8 @@ func trimLeftCheckNewline(s string) (string, bool) {
 	return s[n:], found
 }
 
-func getString(
-	source string, doSingle bool) (_, val string, foundStr, foundNewline bool, err error) {
+func getString(source string, doSingle bool) (
+	_, val string, foundStr, foundNewline bool, err error) {
 
 	source, foundNewline = trimLeftCheckNewline(source)
 
@@ -279,7 +279,7 @@ func (self Base) genericGatherFlags(
 		flags = append(flags, f)
 	}
 
-	if !foundNewline && (!possibleEnd || len(cgText) > 0) {
+	if !foundNewline && (!possibleEnd || len(strings.TrimSpace(cgText)) > 0) {
 		err = fmt.Errorf("Expected line break.")
 	}
 

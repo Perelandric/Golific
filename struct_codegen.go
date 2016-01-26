@@ -36,7 +36,7 @@ func {{$struct.GetCtorName}}() *{{$struct.Name}} {
     },
     {{range $f := $struct.Fields}}
     {{- if and (or $f.IsEmbedded $f.IsPublic) $f.DoDefaultExpr -}}
-    {{printf "%s: %s," $f.Name $f.DefaultExpr}}
+    {{printf "%s: %s," $f.GetNameMaybeType $f.DefaultExpr}}
     {{end -}}
     {{end}}
   }
@@ -100,7 +100,7 @@ func (self *{{$struct.Name}}) MarshalJSON() ([]byte, error) {
     &self.private,
     {{range $f := $struct.Fields -}}
     {{if or $f.IsEmbedded $f.IsPublic -}}
-    self.{{$f.Name}},
+    self.{{$f.GetNameMaybeType}},
     {{end -}}
     {{end -}}
   })
@@ -114,7 +114,7 @@ func (self *{{$struct.Name}}) UnmarshalJSON(j []byte) error {
   self.private = *temp.{{$privateType}}
   {{range $f := $struct.Fields -}}
   {{if or $f.IsEmbedded $f.IsPublic -}}
-  self.{{$f.Name}} = temp.{{$f.Name}}
+  self.{{$f.GetNameMaybeType}} = temp.{{$f.GetNameMaybeType}}
   {{end -}}
   {{end -}}
   return nil

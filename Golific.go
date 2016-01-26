@@ -26,7 +26,7 @@ func main() {
 	for _, file := range os.Args[1:] {
 		fmt.Printf("Processing file: %q\n", file)
 		if err := data.DoFile(file); err != nil {
-			fmt.Println(err)
+			fmt.Printf("File not generated; error: %s\n", err.Error())
 		}
 	}
 }
