@@ -35,7 +35,7 @@ func {{$struct.GetCtorName}}() *{{$struct.Name}} {
       {{end -}}
     },
     {{range $f := $struct.Fields}}
-    {{- if and $f.IsPublic $f.DoDefaultExpr -}}
+    {{- if and (or $f.IsEmbedded $f.IsPublic) $f.DoDefaultExpr -}}
     {{printf "%s: %s," $f.Name $f.DefaultExpr}}
     {{end -}}
     {{end}}
@@ -46,8 +46,10 @@ func {{$struct.GetCtorName}}() *{{$struct.Name}} {
 type {{$struct.Name}} struct {
   private {{$privateType}}
   {{- range $f := $struct.Fields}}
-  {{- if $f.IsPublic}}
-  {{$f.Name}} {{$f.Type}} ` + "`" + `{{$f.Tag}}` + "`" + `
+	{{- if $f.IsEmbedded}}
+	{{printf "%s%s" $f.Name $f.GetSpaceAndTag}}
+  {{- else if $f.IsPublic}}
+  {{printf "%s %s%s" $f.Name $f.Type $f.GetSpaceAndTag}}
   {{- end -}}
   {{end -}}
 }
@@ -55,7 +57,7 @@ type {{$struct.Name}} struct {
 type {{$privateType}} struct {
   {{- range $f := $struct.Fields}}
   {{- if $f.IsPrivate -}}
-  {{$f.Name}} {{$f.Type}} ` + "`" + `{{$f.Tag}}` + "`" + `
+  {{printf "%s %s%s" $f.Name $f.Type $f.GetSpaceAndTag}}
   {{end -}}
   {{end -}}
 }
@@ -63,8 +65,10 @@ type {{$privateType}} struct {
 type {{$jsonType}} struct {
   *{{- $privateType}}
   {{- range $f := $struct.Fields}}
-  {{- if $f.IsPublic}}
-  {{$f.Name}} {{$f.Type}} ` + "`" + `{{$f.Tag}}` + "`" + `
+	{{- if $f.IsEmbedded}}
+	{{printf "%s%s" $f.Name $f.GetSpaceAndTag}}
+  {{- else if $f.IsPublic}}
+  {{printf "%s %s%s" $f.Name $f.Type $f.GetSpaceAndTag}}
   {{- end -}}
   {{end -}}
 }
@@ -95,7 +99,7 @@ func (self *{{$struct.Name}}) MarshalJSON() ([]byte, error) {
   return json.Marshal({{$jsonType}} {
     &self.private,
     {{range $f := $struct.Fields -}}
-    {{if $f.IsPublic -}}
+    {{if or $f.IsEmbedded $f.IsPublic -}}
     self.{{$f.Name}},
     {{end -}}
     {{end -}}
@@ -109,7 +113,7 @@ func (self *{{$struct.Name}}) UnmarshalJSON(j []byte) error {
   }
   self.private = *temp.{{$privateType}}
   {{range $f := $struct.Fields -}}
-  {{if $f.IsPublic -}}
+  {{if or $f.IsEmbedded $f.IsPublic -}}
   self.{{$f.Name}} = temp.{{$f.Name}}
   {{end -}}
   {{end -}}

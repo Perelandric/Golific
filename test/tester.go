@@ -29,7 +29,8 @@ Horse --string=horsie --description="Everyone loves horses."
 
 /*
 @struct Tester
-	Test1 string
+	AnimalEnum --default_expr="Animal.Dog"
+	Test1 string `json:"test1"`
 	Test2 string --read --default_expr=`"foo"`
 	Test3 string --write
 	Test4 string --read --write --default_expr=`"bar"`

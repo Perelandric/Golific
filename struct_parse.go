@@ -11,6 +11,7 @@ const (
 	read = 1 << iota
 	write
 	dropCtor
+	embedded
 )
 
 type StructRepr struct {
@@ -51,12 +52,20 @@ func (self *StructFieldRepr) DoWrite() bool { return len(self.Write) > 0 }
 func (self *StructFieldRepr) DoDefaultExpr() bool {
 	return len(self.DefaultExpr) > 0
 }
-
+func (self *StructFieldRepr) IsEmbedded() bool {
+	return self.flags&embedded == embedded
+}
 func (self *StructFieldRepr) IsPrivate() bool {
-	return self.flags&(read|write) != (read | write)
+	return !self.IsPublic() && !self.IsEmbedded()
 }
 func (self *StructFieldRepr) IsPublic() bool {
-	return !self.IsPrivate()
+	return self.flags&(read|write) == (read | write)
+}
+func (self *StructFieldRepr) GetSpaceAndTag() string {
+	if len(self.Tag) > 0 {
+		return fmt.Sprintf(" `%s`", self.Tag)
+	}
+	return ""
 }
 
 func (self *FileData) doStruct(cgText string) (string, string, error) {
@@ -99,8 +108,35 @@ func (self *FileData) doStruct(cgText string) (string, string, error) {
 func (self *StructRepr) doFields(cgText string) (_ string, err error) {
 	for len(cgText) > 0 && getPrefix(cgText) == "" {
 		var f = StructFieldRepr{}
+		var foundNewline, foundStr bool
 
-		if cgText, f.Name, err = getIdent(cgText); err != nil {
+		if cgText, f.Name, err = getIdentOrType(cgText); err != nil {
+			return cgText, err
+		}
+
+		if cgText, f.Tag, foundStr, foundNewline, err = getString(cgText, false); err != nil {
+			return cgText, err
+		}
+		if foundStr || foundNewline {
+			f.flags |= embedded
+			self.Fields = append(self.Fields, &f)
+			if foundNewline {
+				continue
+			}
+		}
+
+		if cgText, foundNewline, err = f.gatherEmbeddedFlags(cgText); err != nil {
+			return cgText, err
+		}
+		if foundNewline {
+			f.flags |= embedded
+			self.Fields = append(self.Fields, &f)
+			continue
+		}
+
+		// We know it's not an embedded type, so make sure a `*` wasn't given at the
+		// start of the name. Using getIdent() just so we get the expected error.
+		if _, _, err = getIdent(f.Name); err != nil {
 			return cgText, err
 		}
 
@@ -111,6 +147,21 @@ func (self *StructRepr) doFields(cgText string) (_ string, err error) {
 
 		if cgText, f.Type, err = getType(cgText); err != nil {
 			return cgText, err
+		}
+
+		// A linebreak here means this field is done. This is necessary before the
+		// `getString()` call.
+		if cgText, foundNewline = trimLeftCheckNewline(cgText); foundNewline {
+			self.Fields = append(self.Fields, &f)
+			continue
+		}
+
+		// See if there's a tag.
+		if cgText, f.Tag, _, foundNewline, err = getString(cgText, false); err != nil {
+			return cgText, err
+		}
+		if foundNewline {
+			continue
 		}
 
 		if cgText, err = f.gatherFlags(cgText); err != nil {
@@ -135,9 +186,6 @@ func (self *StructRepr) doFields(cgText string) (_ string, err error) {
 			if f.flags&write == write && len(f.Write) == 0 {
 				f.Write = "Set" + f.Name
 			}
-
-			// If `read` and `write` are set, make sure accessor names (if any) don't
-			// conflict with property names
 		}
 
 		self.Fields = append(self.Fields, &f)
@@ -146,10 +194,6 @@ func (self *StructRepr) doFields(cgText string) (_ string, err error) {
 	if len(self.Fields) == 0 {
 		return cgText, fmt.Errorf("Enums must have at least one variant defined")
 	}
-
-	// TODO: Should run through all fields and make sure that no method names
-	// conflict with property names. This isn't entirely necessary since the
-	// compiler would report it, but still helpful.
 
 	return cgText, nil
 }
@@ -185,6 +229,42 @@ func (self *StructRepr) gatherFlags(cgText string) (string, error) {
 	return cgText, nil
 }
 
+func (self *StructFieldRepr) gatherEmbeddedFlags(
+	cgText string) (string, bool, error) {
+
+	// If there's a newline, we have an embedded field
+	cgText, foundNewline := trimLeftCheckNewline(cgText)
+	if foundNewline {
+		return cgText, true, nil
+	}
+
+	// If there's no leading `--` (and no newline, see above), it's not embedded
+	if strings.HasPrefix(cgText, "--") == false {
+		return cgText, false, nil
+	}
+
+	cgText, flags, _, err := self.genericGatherFlags(cgText, true)
+	if err != nil {
+		return cgText, false, err
+	}
+
+	for _, flag := range flags {
+		switch strings.ToLower(flag.Name) {
+
+		case "default_expr": // Set default expression
+			if self.DefaultExpr, err = flag.getNonEmpty(); err != nil {
+				return cgText, false, err
+			}
+			// TODO: Should I parse the expression here? Use the formatter to verify?
+
+		default:
+			return cgText, false, fmt.Errorf("Unknown flag %q for embedded field", flag.Name)
+		}
+	}
+
+	return cgText, true, nil
+}
+
 func (self *StructFieldRepr) gatherFlags(cgText string) (string, error) {
 	const warnExported = "WARNING: The %s method %q is not exported.\n"
 
@@ -195,11 +275,6 @@ func (self *StructFieldRepr) gatherFlags(cgText string) (string, error) {
 
 	for _, flag := range flags {
 		switch strings.ToLower(flag.Name) {
-
-		case "tags": // Typical struct field tags
-			if self.Tag, err = flag.getWithEqualSign(); err != nil {
-				return cgText, err
-			}
 
 		case "read": // Set read access
 			self.flags |= read

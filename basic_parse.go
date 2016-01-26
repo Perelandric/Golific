@@ -86,6 +86,15 @@ func getFlagWord(source string) (_, word string, err error) {
 	return source[n:], source[:n], nil
 }
 
+func getIdentOrType(source string) (_, ident_type string, err error) {
+	if source, ident_type, err = getIdent(source); err != nil {
+		if source, ident_type, err = getType(source); err != nil {
+			return source, "", fmt.Errorf("Value is neither a valid identifier nor type")
+		}
+	}
+	return source, ident_type, nil
+}
+
 func getIdent(source string) (_, ident string, err error) {
 	source = strings.TrimSpace(source)
 
@@ -102,7 +111,7 @@ func getIdent(source string) (_, ident string, err error) {
 	}
 
 	if n == 0 {
-		return "", "", fmt.Errorf("Invalid identifier: %q", "")
+		return source, "", fmt.Errorf("Invalid identifier: %q", "")
 	}
 
 	return source[n:], source[:n], nil
@@ -185,6 +194,27 @@ func trimLeftCheckNewline(s string) (string, bool) {
 	return s[n:], found
 }
 
+func getString(
+	source string, doSingle bool) (_, val string, foundStr, foundNewline bool, err error) {
+
+	source, foundNewline = trimLeftCheckNewline(source)
+
+	if len(source) > 0 &&
+		(source[0] == '"' || source[0] == '`' || (doSingle && source[0] == '\'')) {
+
+		var idx = strings.IndexByte(source[1:], source[0])
+
+		if idx == -1 {
+			return source, "", false, foundNewline, fmt.Errorf("Missing closing quote")
+		}
+		idx += 1 // Because we started searching on the second character
+
+		return source[idx+1:], source[1:idx], true, foundNewline, nil
+	}
+
+	return source, "", false, foundNewline, nil
+}
+
 func (self Base) genericGatherFlags(
 	cgText string, possibleEnd bool) (string, []Flag, bool, error) {
 
@@ -224,17 +254,15 @@ func (self Base) genericGatherFlags(
 				return cgText, flags, false, fmt.Errorf("Expected value after '='")
 			}
 
-			if cgText[0] == '"' || cgText[0] == '\'' || cgText[0] == '`' {
-				var idx = strings.IndexByte(cgText[1:], cgText[0])
+			var foundStr bool
 
-				if idx == -1 {
-					return cgText, flags, false, fmt.Errorf("Missing closing quote")
-				}
-				idx += 1 // Because we started searching on the second character
+			// Don't need the foundNewline; we already trimmed it above
+			if cgText, f.Value, foundStr, _, err = getString(cgText, true); err != nil {
+				return cgText, flags, false, err
+			}
 
-				f.Value, cgText = cgText[1:idx], cgText[idx+1:]
-
-			} else { // Get unquoted value
+			if !foundStr {
+				// Get unquoted value
 				var idx = 0
 				for _, r := range cgText {
 					if unicode.IsSpace(r) {
