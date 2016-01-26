@@ -25,6 +25,7 @@ Dog --string=doggy
 		--description="Your best friend, and you know it."
 Cat --string=kitty --description="Your best friend, but doesn't always show it."
 Horse --string=horsie --description="Everyone loves horses."
+
 */
 
 /*
