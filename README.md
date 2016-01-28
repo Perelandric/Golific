@@ -239,6 +239,10 @@ The methods described in this section use `MyEnum` as a placeholder name for the
 
 `func (me MyEnum) IntValue() int` - IntValue is the same as `Value()`, except that the value is cast to an `int`.
 
+`func (me MyEnum) Type() string` - Type returns the variant's type name as a string.
+
+`func (me MyEnum) Namespace() string` - Namespace returns the variant's namespace name as a string.
+
 #####*Methods for bitflag enums*
 
 The methods below are only generated when the enum uses the `--bitflags` option.

@@ -91,6 +91,16 @@ func ({{$self}} {{$variantType}}) Name() string {
 	return ""
 }
 
+// Type returns the variant's type name as a string
+func ({{$self}} {{$variantType}}) Type() string {
+	return {{printf "%q" $variantType}}
+}
+
+// Namespace returns the variant's namespace name as a string
+func ({{$self}} {{$variantType}}) Namespace() string {
+	return {{printf "%q" $enum.Name}}
+}
+
 // String returns the given string value of the variant. If none has been set,
 // its return value is as though 'Name()' had been called.
 {{if .IsBitflag -}}

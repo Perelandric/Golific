@@ -73,6 +73,6 @@ func main() {
 
 	// Enumerate all the variants in a range loop
 	for _, animal := range Animal.Values {
-		fmt.Printf("Kind: %s, Description: %q\n", animal, animal.Description())
+		fmt.Printf("Kind: %s, Description: %q, Type: %q, Namespace: %q\n", animal, animal.Description(), animal.Type(), animal.Namespace())
 	}
 }
