@@ -58,7 +58,7 @@ func (self *FileData) DoFile(file string) error {
 
 	for _, cg := range f.Comments {
 		for _, c := range cg.List {
-			if strings.HasPrefix(c.Text, "/*") {
+			if strings.HasPrefix(c.Text, "/*") { // Only do multi-line comments
 				self.doComment(c)
 			}
 		}
@@ -72,7 +72,7 @@ func (self *FileData) DoFile(file string) error {
 }
 
 func (self *FileData) doComment(c *ast.Comment) {
-	cgText := c.Text
+	cgText := c.Text[2 : len(c.Text)-2]
 
 	var err error
 	var name, prefix string
