@@ -145,11 +145,6 @@ func (self *StructRepr) doFields(cgText string) (_ string, err error) {
 			return cgText, err
 		}
 
-		if isExportedIdent(f.Name) == false {
-			return cgText,
-				fmt.Errorf("@struct fields must be exported. Found %q", f.Name)
-		}
-
 		if cgText, f.Type, err = getType(cgText); err != nil {
 			return cgText, err
 		}
@@ -184,7 +179,7 @@ func (self *StructRepr) doFields(cgText string) (_ string, err error) {
 				f.Read = f.Name
 			}
 			if f.flags&write == write && len(f.Write) == 0 {
-				f.Write = "Set" + f.Name
+				f.Write = "Set" + strings.Title(f.Name)
 			}
 		}
 
