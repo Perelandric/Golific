@@ -74,8 +74,14 @@ func (self *StructFieldRepr) GetNameMaybeType() string {
 	return strings.TrimLeft(self.Name, "*")
 }
 
-func (self *FileData) doStruct(cgText string) (string, string, error) {
-	strct := StructRepr{}
+func (self *FileData) doStruct(cgText string, docs []string) (string, string, error) {
+	strct := StructRepr{
+		BaseRepr: BaseRepr{
+			Base: Base{
+				docs: docs,
+			},
+		},
+	}
 
 	var err error
 
@@ -113,8 +119,11 @@ func (self *FileData) doStruct(cgText string) (string, string, error) {
 
 func (self *StructRepr) doFields(cgText string) (_ string, err error) {
 
-	for len(cgText) > 0 && getPrefix(cgText) == "" {
+	for len(cgText) > 0 && getPrefix(cgText, false) == "" {
 		var f = StructFieldRepr{}
+
+		cgText = f.gatherCodeComments(cgText)
+
 		var leadingNewline, foundStr, isEmbedded, wasQuote bool
 
 		if cgText, f.Name, err = getIdentOrType(cgText); err != nil {

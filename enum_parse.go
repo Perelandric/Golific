@@ -78,8 +78,13 @@ func (repr *EnumRepr) GetIntType() string {
 	return "uint64"
 }
 
-func (self *FileData) doEnum(cgText string) (string, string, error) {
+func (self *FileData) doEnum(cgText string, docs []string) (string, string, error) {
 	enum := EnumRepr{
+		BaseRepr: BaseRepr{
+			Base: Base{
+				docs: docs,
+			},
+		},
 		iterName: "Values",
 	}
 
@@ -114,10 +119,12 @@ func (self *FileData) doEnum(cgText string) (string, string, error) {
 }
 
 func (self *EnumRepr) doFields(cgText string) (_ string, err error) {
-	for len(cgText) > 0 && getPrefix(cgText) == "" {
+	for len(cgText) > 0 && getPrefix(cgText, false) == "" {
 		var f = EnumFieldRepr{
 			Value: -1,
 		}
+
+		cgText = f.gatherCodeComments(cgText)
 
 		if cgText, f.Name, err = getIdent(cgText); err != nil {
 			return cgText, err

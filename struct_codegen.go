@@ -43,22 +43,23 @@ func {{$struct.GetCtorName}}() *{{$struct.Name}} {
 }
 {{end}}
 
+{{$struct.DoDocs -}}
 type {{$struct.Name}} struct {
   private {{$privateType}}
   {{- range $f := $struct.Fields}}
 	{{- if $f.IsEmbedded}}
-	{{printf "%s%s" $f.Name $f.GetSpaceAndTag}}
+	{{printf "%s%s%s" $f.DoDocs $f.Name $f.GetSpaceAndTag}}
   {{- else if $f.IsPublic}}
-  {{printf "%s %s%s" $f.Name $f.Type $f.GetSpaceAndTag}}
+  {{printf "%s%s %s%s" $f.DoDocs $f.Name $f.Type $f.GetSpaceAndTag}}
   {{- end -}}
   {{end -}}
 }
 
 type {{$privateType}} struct {
   {{- range $f := $struct.Fields}}
-  {{- if $f.IsPrivate -}}
-  {{printf "%s %s%s" $f.Name $f.Type $f.GetSpaceAndTag}}
-  {{end -}}
+  {{- if $f.IsPrivate}}
+  {{printf "%s%s %s%s" $f.DoDocs $f.Name $f.Type $f.GetSpaceAndTag}}
+  {{- end -}}
   {{end -}}
 }
 

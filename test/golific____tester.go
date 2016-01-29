@@ -35,7 +35,7 @@ Tester struct
 ******************************/
 func NewTester() *Tester {
 	return &Tester{
-		private: private_nm883lanuayr{
+		private: private_1e9ijakv99xd{
 			Test2: "foo",
 		},
 		AnimalEnum: &Animal.Dog,
@@ -43,22 +43,27 @@ func NewTester() *Tester {
 	}
 }
 
+// A struct to test the @struct descriptor
+//
+// And another line or two for good measure
 type Tester struct {
-	private private_nm883lanuayr
+	private private_1e9ijakv99xd
 	*AnimalEnum
+	// The fourth item
 	Test4    string
 	Test5    string
 	*FooEnum `whatever`
 }
 
-type private_nm883lanuayr struct {
+type private_1e9ijakv99xd struct {
+	// The first item
 	Test1 string `json:"test1"`
 	Test2 string
 	Test3 string
 }
 
-type json_nm883lanuayr struct {
-	*private_nm883lanuayr
+type json_1e9ijakv99xd struct {
+	*private_1e9ijakv99xd
 	*AnimalEnum
 	Test4    string
 	Test5    string
@@ -74,7 +79,7 @@ func (self *Tester) SetTest3(v string) {
 }
 
 func (self *Tester) MarshalJSON() ([]byte, error) {
-	return json.Marshal(json_nm883lanuayr{
+	return json.Marshal(json_1e9ijakv99xd{
 		&self.private,
 		self.AnimalEnum,
 		self.Test4,
@@ -84,11 +89,11 @@ func (self *Tester) MarshalJSON() ([]byte, error) {
 }
 
 func (self *Tester) UnmarshalJSON(j []byte) error {
-	var temp json_nm883lanuayr
+	var temp json_1e9ijakv99xd
 	if err := json.Unmarshal(j, &temp); err != nil {
 		return err
 	}
-	self.private = *temp.private_nm883lanuayr
+	self.private = *temp.private_1e9ijakv99xd
 	self.AnimalEnum = temp.AnimalEnum
 	self.Test4 = temp.Test4
 	self.Test5 = temp.Test5
@@ -102,19 +107,19 @@ FooEnum - bit flags
 
 ******************************/
 
-type FooEnum struct{ value_ifdr51hk9ovr uint8 }
+type FooEnum struct{ value_1iaggdjg020s2 uint8 }
 
 var Foo = struct {
 	Bar FooEnum
 	Baz FooEnum
 	Buz FooEnum
 
-	// Used to iterate in range loops
+	// foobar is an array of all variants. Useful in range loops.
 	foobar [3]FooEnum
 }{
-	Bar: FooEnum{value_ifdr51hk9ovr: 1},
-	Baz: FooEnum{value_ifdr51hk9ovr: 2},
-	Buz: FooEnum{value_ifdr51hk9ovr: 4},
+	Bar: FooEnum{value_1iaggdjg020s2: 1},
+	Baz: FooEnum{value_1iaggdjg020s2: 2},
+	Buz: FooEnum{value_1iaggdjg020s2: 4},
 }
 
 func init() {
@@ -125,17 +130,17 @@ func init() {
 
 // Value returns the numeric value of the variant as a uint8.
 func (Fe FooEnum) Value() uint8 {
-	return Fe.value_ifdr51hk9ovr
+	return Fe.value_1iaggdjg020s2
 }
 
 // IntValue is the same as 'Value()', except that the value is cast to an 'int'.
 func (Fe FooEnum) IntValue() int {
-	return int(Fe.value_ifdr51hk9ovr)
+	return int(Fe.value_1iaggdjg020s2)
 }
 
 // Name returns the name of the variant as a string.
 func (Fe FooEnum) Name() string {
-	switch Fe.value_ifdr51hk9ovr {
+	switch Fe.value_1iaggdjg020s2 {
 	case 1:
 		return "Bar"
 	case 2:
@@ -162,7 +167,7 @@ func (Fe FooEnum) Namespace() string {
 // If multiple bit values are assigned, the string values will be joined into a
 // single string using "," as a separator.
 func (Fe FooEnum) String() string {
-	switch Fe.value_ifdr51hk9ovr {
+	switch Fe.value_1iaggdjg020s2 {
 	case 1:
 		return "bar"
 	case 2:
@@ -171,14 +176,14 @@ func (Fe FooEnum) String() string {
 		return "Buz"
 	}
 
-	if Fe.value_ifdr51hk9ovr == 0 {
+	if Fe.value_1iaggdjg020s2 == 0 {
 		return ""
 	}
 
 	var vals = make([]string, 0, 3/2)
 
 	for _, item := range Foo.foobar {
-		if Fe.value_ifdr51hk9ovr&item.value_ifdr51hk9ovr == item.value_ifdr51hk9ovr {
+		if Fe.value_1iaggdjg020s2&item.value_1iaggdjg020s2 == item.value_1iaggdjg020s2 {
 			vals = append(vals, item.String())
 		}
 	}
@@ -188,7 +193,7 @@ func (Fe FooEnum) String() string {
 // Description returns the description of the variant. If none has been set, its
 // return value is as though 'String()' had been called.
 func (Fe FooEnum) Description() string {
-	switch Fe.value_ifdr51hk9ovr {
+	switch Fe.value_1iaggdjg020s2 {
 	case 1:
 		return "bar"
 	case 2:
@@ -216,13 +221,13 @@ func (Fe *FooEnum) UnmarshalJSON(b []byte) error {
 
 	switch s {
 	case "bar":
-		Fe.value_ifdr51hk9ovr = 1
+		Fe.value_1iaggdjg020s2 = 1
 		return nil
 	case "baz":
-		Fe.value_ifdr51hk9ovr = 2
+		Fe.value_1iaggdjg020s2 = 2
 		return nil
 	case "Buz":
-		Fe.value_ifdr51hk9ovr = 4
+		Fe.value_1iaggdjg020s2 = 4
 		return nil
 	}
 
@@ -241,7 +246,7 @@ func (Fe *FooEnum) UnmarshalJSON(b []byte) error {
 		}
 	}
 
-	Fe.value_ifdr51hk9ovr = uint8(val)
+	Fe.value_1iaggdjg020s2 = uint8(val)
 	return nil
 }
 
@@ -249,21 +254,21 @@ func (Fe *FooEnum) UnmarshalJSON(b []byte) error {
 
 // Add returns a copy of the variant with the value of 'v' added to it.
 func (Fe FooEnum) Add(v FooEnum) FooEnum {
-	Fe.value_ifdr51hk9ovr |= v.value_ifdr51hk9ovr
+	Fe.value_1iaggdjg020s2 |= v.value_1iaggdjg020s2
 	return Fe
 }
 
 // AddAll returns a copy of the variant with all the values of 'v' added to it.
 func (Fe FooEnum) AddAll(v ...FooEnum) FooEnum {
 	for _, item := range v {
-		Fe.value_ifdr51hk9ovr |= item.value_ifdr51hk9ovr
+		Fe.value_1iaggdjg020s2 |= item.value_1iaggdjg020s2
 	}
 	return Fe
 }
 
 // Remove returns a copy of the variant with the value of 'v' removed from it.
 func (Fe FooEnum) Remove(v FooEnum) FooEnum {
-	Fe.value_ifdr51hk9ovr &^= v.value_ifdr51hk9ovr
+	Fe.value_1iaggdjg020s2 &^= v.value_1iaggdjg020s2
 	return Fe
 }
 
@@ -271,7 +276,7 @@ func (Fe FooEnum) Remove(v FooEnum) FooEnum {
 // from it.
 func (Fe FooEnum) RemoveAll(v ...FooEnum) FooEnum {
 	for _, item := range v {
-		Fe.value_ifdr51hk9ovr &^= item.value_ifdr51hk9ovr
+		Fe.value_1iaggdjg020s2 &^= item.value_1iaggdjg020s2
 	}
 	return Fe
 }
@@ -279,14 +284,14 @@ func (Fe FooEnum) RemoveAll(v ...FooEnum) FooEnum {
 // Has returns 'true' if the receiver contains the value of 'v', otherwise
 // 'false'.
 func (Fe FooEnum) Has(v FooEnum) bool {
-	return Fe.value_ifdr51hk9ovr&v.value_ifdr51hk9ovr == v.value_ifdr51hk9ovr
+	return Fe.value_1iaggdjg020s2&v.value_1iaggdjg020s2 == v.value_1iaggdjg020s2
 }
 
 // HasAny returns 'true' if the receiver contains any of the values of 'v',
 // otherwise 'false'.
 func (Fe FooEnum) HasAny(v ...FooEnum) bool {
 	for _, item := range v {
-		if Fe.value_ifdr51hk9ovr&item.value_ifdr51hk9ovr == item.value_ifdr51hk9ovr {
+		if Fe.value_1iaggdjg020s2&item.value_1iaggdjg020s2 == item.value_1iaggdjg020s2 {
 			return true
 		}
 	}
@@ -297,7 +302,7 @@ func (Fe FooEnum) HasAny(v ...FooEnum) bool {
 // otherwise 'false'.
 func (Fe FooEnum) HasAll(v ...FooEnum) bool {
 	for _, item := range v {
-		if Fe.value_ifdr51hk9ovr&item.value_ifdr51hk9ovr != item.value_ifdr51hk9ovr {
+		if Fe.value_1iaggdjg020s2&item.value_1iaggdjg020s2 != item.value_1iaggdjg020s2 {
 			return false
 		}
 	}
@@ -310,19 +315,19 @@ OofEnum
 
 ******************************/
 
-type OofEnum struct{ value_ngomxw40x6yi uint8 }
+type OofEnum struct{ value_1126e7l2dthp0 uint8 }
 
 var Oof = struct {
 	Bar OofEnum
 	Baz OofEnum
 	Buz OofEnum
 
-	// Used to iterate in range loops
+	// Values is an array of all variants. Useful in range loops.
 	Values [3]OofEnum
 }{
-	Bar: OofEnum{value_ngomxw40x6yi: 1},
-	Baz: OofEnum{value_ngomxw40x6yi: 123},
-	Buz: OofEnum{value_ngomxw40x6yi: 3},
+	Bar: OofEnum{value_1126e7l2dthp0: 1},
+	Baz: OofEnum{value_1126e7l2dthp0: 123},
+	Buz: OofEnum{value_1126e7l2dthp0: 3},
 }
 
 func init() {
@@ -333,17 +338,17 @@ func init() {
 
 // Value returns the numeric value of the variant as a uint8.
 func (Oe OofEnum) Value() uint8 {
-	return Oe.value_ngomxw40x6yi
+	return Oe.value_1126e7l2dthp0
 }
 
 // IntValue is the same as 'Value()', except that the value is cast to an 'int'.
 func (Oe OofEnum) IntValue() int {
-	return int(Oe.value_ngomxw40x6yi)
+	return int(Oe.value_1126e7l2dthp0)
 }
 
 // Name returns the name of the variant as a string.
 func (Oe OofEnum) Name() string {
-	switch Oe.value_ngomxw40x6yi {
+	switch Oe.value_1126e7l2dthp0 {
 	case 1:
 		return "Bar"
 	case 123:
@@ -369,7 +374,7 @@ func (Oe OofEnum) Namespace() string {
 // its return value is as though 'Name()' had been called.
 
 func (Oe OofEnum) String() string {
-	switch Oe.value_ngomxw40x6yi {
+	switch Oe.value_1126e7l2dthp0 {
 	case 1:
 		return "bar"
 	case 123:
@@ -384,7 +389,7 @@ func (Oe OofEnum) String() string {
 // Description returns the description of the variant. If none has been set, its
 // return value is as though 'String()' had been called.
 func (Oe OofEnum) Description() string {
-	switch Oe.value_ngomxw40x6yi {
+	switch Oe.value_1126e7l2dthp0 {
 	case 1:
 		return "bar"
 	case 123:
@@ -405,7 +410,7 @@ func (Oe *OofEnum) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	Oe.value_ngomxw40x6yi = uint8(n)
+	Oe.value_1126e7l2dthp0 = uint8(n)
 	return nil
 }
 
@@ -415,19 +420,23 @@ AnimalEnum
 
 ******************************/
 
-type AnimalEnum struct{ value_1v1axzqkxszz6 uint8 }
+// An enum to test the @enum descriptor
+type AnimalEnum struct{ value_1wfru5oaco84i uint8 }
 
 var Animal = struct {
-	Dog   AnimalEnum
-	Cat   AnimalEnum
+	// Dog is a dog
+	Dog AnimalEnum
+	// Cat is a cat
+	Cat AnimalEnum
+	// Horse is a horse (of course)
 	Horse AnimalEnum
 
-	// Used to iterate in range loops
+	// Values is an array of all variants. Useful in range loops.
 	Values [3]AnimalEnum
 }{
-	Dog:   AnimalEnum{value_1v1axzqkxszz6: 1},
-	Cat:   AnimalEnum{value_1v1axzqkxszz6: 2},
-	Horse: AnimalEnum{value_1v1axzqkxszz6: 3},
+	Dog:   AnimalEnum{value_1wfru5oaco84i: 1},
+	Cat:   AnimalEnum{value_1wfru5oaco84i: 2},
+	Horse: AnimalEnum{value_1wfru5oaco84i: 3},
 }
 
 func init() {
@@ -438,17 +447,17 @@ func init() {
 
 // Value returns the numeric value of the variant as a uint8.
 func (Ae AnimalEnum) Value() uint8 {
-	return Ae.value_1v1axzqkxszz6
+	return Ae.value_1wfru5oaco84i
 }
 
 // IntValue is the same as 'Value()', except that the value is cast to an 'int'.
 func (Ae AnimalEnum) IntValue() int {
-	return int(Ae.value_1v1axzqkxszz6)
+	return int(Ae.value_1wfru5oaco84i)
 }
 
 // Name returns the name of the variant as a string.
 func (Ae AnimalEnum) Name() string {
-	switch Ae.value_1v1axzqkxszz6 {
+	switch Ae.value_1wfru5oaco84i {
 	case 1:
 		return "Dog"
 	case 2:
@@ -474,7 +483,7 @@ func (Ae AnimalEnum) Namespace() string {
 // its return value is as though 'Name()' had been called.
 
 func (Ae AnimalEnum) String() string {
-	switch Ae.value_1v1axzqkxszz6 {
+	switch Ae.value_1wfru5oaco84i {
 	case 1:
 		return "doggy"
 	case 2:
@@ -489,7 +498,7 @@ func (Ae AnimalEnum) String() string {
 // Description returns the description of the variant. If none has been set, its
 // return value is as though 'String()' had been called.
 func (Ae AnimalEnum) Description() string {
-	switch Ae.value_1v1axzqkxszz6 {
+	switch Ae.value_1wfru5oaco84i {
 	case 1:
 		return "Your best friend, and you know it."
 	case 2:
@@ -517,13 +526,13 @@ func (Ae *AnimalEnum) UnmarshalJSON(b []byte) error {
 
 	switch s {
 	case "doggy":
-		Ae.value_1v1axzqkxszz6 = 1
+		Ae.value_1wfru5oaco84i = 1
 		return nil
 	case "kitty":
-		Ae.value_1v1axzqkxszz6 = 2
+		Ae.value_1wfru5oaco84i = 2
 		return nil
 	case "horsie":
-		Ae.value_1v1axzqkxszz6 = 3
+		Ae.value_1wfru5oaco84i = 3
 		return nil
 	default:
 		log.Printf("Unexpected value: %q while unmarshaling AnimalEnum\n", s)

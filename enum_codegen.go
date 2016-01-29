@@ -48,14 +48,15 @@ var enum_tmpl = `
 
 ******************************/
 
+{{$enum.DoDocs -}}
 type {{$variantType}} struct{ {{$uniqField}} {{$intType}} }
 
 var {{$enum.Name}} = struct {
 	{{- range $f := .Fields}}
-	{{$f.Name}} {{$variantType}}
+	{{printf "%s%s %s" $f.DoDocs $f.Name $variantType}}
 	{{- end}}
 
-	// Used to iterate in range loops
+	// {{.GetIterName}} is an array of all variants. Useful in range loops.
 	{{.GetIterName}} [{{len .Fields}}]{{$variantType}}
 }{
 	{{- range $f := .Fields}}

@@ -15,11 +15,6 @@ type Flag struct {
 	FoundEqual bool
 }
 
-type Base struct {
-	flags  uint
-	unique string
-}
-
 func (self *Flag) getWithEqualSign() (string, error) {
 	if !self.FoundEqual {
 		return self.Value,
@@ -48,6 +43,12 @@ func (self *Base) getUniqueId() string {
 	return self.unique
 }
 
+type Base struct {
+	flags  uint
+	unique string
+	docs   []string
+}
+
 func (self *Base) doBooleanFlag(flag Flag, toSet uint) error {
 	if !flag.FoundEqual || flag.Value == "true" {
 		self.flags |= toSet
@@ -59,11 +60,29 @@ func (self *Base) doBooleanFlag(flag Flag, toSet uint) error {
 	return nil
 }
 
+func (self *Base) DoDocs() string {
+	if len(self.docs) > 0 {
+		return "// " + strings.Join(self.docs, "\n// ") + "\n"
+	}
+	return ""
+}
+
 type BaseRepr struct {
 	Base
 }
 type BaseFieldRepr struct {
 	Base
+}
+
+func (self *BaseFieldRepr) gatherCodeComments(cgText string) string {
+	var commentLine string
+
+	for strings.HasPrefix(cgText, "//") {
+		cgText, commentLine = getLine(cgText[2:])
+		self.docs = append(self.docs, commentLine)
+	}
+
+	return cgText
 }
 
 func getFlagWord(source string) (_, word string, err error) {
@@ -279,6 +298,7 @@ func (self Base) genericGatherFlags(
 		flags = append(flags, f)
 	}
 
+	// There must be a line break after the last flag, unless it's the EOF
 	if !foundNewline && (!possibleEnd || len(strings.TrimSpace(cgText)) > 0) {
 		err = fmt.Errorf("Expected line break.")
 	}
