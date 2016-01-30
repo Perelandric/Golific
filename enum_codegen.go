@@ -159,7 +159,7 @@ func ({{$self}} {{$variantType}}) MarshalJSON() ([]byte, error) {
 }
 {{- else -}}
 func ({{$self}} {{$variantType}}) MarshalJSON() ([]byte, error) {
-  return []byte(strconv.Itoa({{$self}}.IntValue())), nil
+  return []byte(strconv.Itoa(int({{$self}}.{{$uniqField}}))), nil
 }
 {{- end}}
 
