@@ -243,6 +243,8 @@ The methods described in this section use `MyEnum` as a placeholder name for the
 
 `func (me MyEnum) Namespace() string` - Namespace returns the variant's namespace name as a string.
 
+`func (me MyEnum) IsDefault() bool` - IsDefault returns `true` if the variant was designated as the default value.
+
 #####*Methods for bitflag enums*
 
 The methods below are only generated when the enum uses the `--bitflags` option.

@@ -50,6 +50,9 @@ func (self *EnumRepr) DoSummary() bool { return self.flags&summary == summary }
 func (self *EnumRepr) DoJson() bool    { return self.flags&dropJson == 0 }
 func (self *EnumRepr) DoXml() bool     { return self.flags&dropXml == 0 }
 func (self *EnumRepr) IsBitflag() bool { return self.flags&bitflags == bitflags }
+func (self *EnumRepr) HasDefault() bool {
+	return self.flags&hasDefault == hasDefault
+}
 
 func (self *EnumRepr) JsonMarshalIsString() bool {
 	return self.flags&jsonMarshalIsString == jsonMarshalIsString
@@ -128,6 +131,8 @@ func (self *EnumRepr) validate() error {
 			if len(def) > 0 {
 				return fmt.Errorf("--default was previously defined on %q", def)
 			}
+
+			self.flags |= hasDefault // Needed for `IsDefault()` method.
 			def = f.Name
 		}
 	}

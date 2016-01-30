@@ -92,14 +92,19 @@ func ({{$self}} {{$variantType}}) Name() string {
 	return ""
 }
 
-// Type returns the variant's type name as a string
+// Type returns the variant's type name as a string.
 func ({{$self}} {{$variantType}}) Type() string {
 	return {{printf "%q" $variantType}}
 }
 
-// Namespace returns the variant's namespace name as a string
+// Namespace returns the variant's namespace name as a string.
 func ({{$self}} {{$variantType}}) Namespace() string {
 	return {{printf "%q" $enum.Name}}
+}
+
+// IsDefault returns true if the variant was designated as the default value.
+func (self {{$variantType}}) IsDefault() bool {
+	return {{printf "%t" $enum.HasDefault}} && self.{{$uniqField}} == 0
 }
 
 // String returns the given string value of the variant. If none has been set,
