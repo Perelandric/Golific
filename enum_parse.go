@@ -17,6 +17,8 @@ const (
 	xmlUnmarshalIsString
 	dropJson
 	dropXml
+	hasDefault
+	hasCustomValue
 )
 
 type EnumRepr struct {
@@ -120,9 +122,7 @@ func (self *FileData) doEnum(cgText string, docs []string) (string, string, erro
 
 func (self *EnumRepr) doFields(cgText string) (_ string, err error) {
 	for len(cgText) > 0 && getPrefix(cgText, false) == "" {
-		var f = EnumFieldRepr{
-			Value: -1,
-		}
+		var f = EnumFieldRepr{}
 
 		cgText = f.gatherCodeComments(cgText)
 
@@ -140,7 +140,7 @@ func (self *EnumRepr) doFields(cgText string) (_ string, err error) {
 			return cgText, err
 		}
 
-		if self.flags&bitflags == bitflags && f.Value != -1 {
+		if self.flags&bitflags == bitflags && f.Value != 0 {
 			return cgText, fmt.Errorf("bitflags may not have a custom --value")
 		}
 
@@ -151,7 +151,7 @@ func (self *EnumRepr) doFields(cgText string) (_ string, err error) {
 			f.Description = f.String
 		}
 
-		if f.Value == -1 {
+		if f.Value == 0 && f.flags&hasDefault == 0 {
 			if self.flags&bitflags == bitflags {
 				f.Value = 1 << uint(len(self.Fields))
 			} else {
@@ -250,6 +250,9 @@ func (self *EnumRepr) gatherFlags(cgText string) (string, error) {
 }
 
 func (self *EnumFieldRepr) gatherFlags(cgText string) (string, error) {
+
+	const errCustomDefault = "A --value can not be assigned on a --default variant"
+
 	cgText, flags, _, err := self.genericGatherFlags(cgText, true)
 	if err != nil {
 		return cgText, err
@@ -257,6 +260,14 @@ func (self *EnumFieldRepr) gatherFlags(cgText string) (string, error) {
 
 	for _, flag := range flags {
 		switch strings.ToLower(flag.Name) {
+
+		case "default": // The default value used when [un]marshaling
+			if err = self.doBooleanFlag(flag, hasDefault); err != nil {
+				return cgText, err
+			}
+			if self.flags&(hasDefault|hasCustomValue) == (hasDefault | hasCustomValue) {
+				return cgText, fmt.Errorf(errCustomDefault)
+			}
 
 		case "string": // The string representation of the field
 			if self.String, err = flag.getWithEqualSign(); err != nil {
@@ -275,8 +286,20 @@ func (self *EnumFieldRepr) gatherFlags(cgText string) (string, error) {
 
 			if n, err := strconv.ParseUint(flag.Value, 10, 32); err != nil {
 				return cgText, fmt.Errorf("%q is not a valid uint", flag.Value)
+
 			} else {
 				self.Value = int64(n)
+
+				if self.flags&hasDefault == hasDefault {
+					return cgText, fmt.Errorf(errCustomDefault)
+				}
+
+				if self.Value == 0 {
+					return cgText,
+						fmt.Errorf("The 0 value is reserved for the --default flag.")
+				}
+
+				self.flags |= hasCustomValue
 			}
 
 		default:

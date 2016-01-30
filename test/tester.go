@@ -8,30 +8,32 @@ import (
 //go:generate Golific $GOFILE
 
 /*
-@enum Foo --bitflags --bitflag_separator="," --iterator_name="foobar" --json=string --summary
-Bar --string=bar
-Baz --string=baz --description="This is the description"
-Buz
+@enum Foo --bitflags --bitflag_separator=","
+					--iterator_name="foobar" --json=string --summary
+	Bar --string=bar
+	Baz --string=baz --description="This is the description"
+	Buz
 
 @enum Oof
-Bar --string="bar"
-Baz --value = 123
-Buz --description="Some description"
+	Bar --string="bar"
+	Baz --value = 123
+	Buz --description="Some description"
 */
 
 /*
 // An enum to test the @enum descriptor
 @enum Animal --json=string --summary
 
-// Dog is a dog
-Dog --string=doggy
-		--description="Your best friend, and you know it."
+	// Dog is a dog
+	Dog --string=doggy
+			--description="Your best friend, and you know it."
 
-// Cat is a cat
-Cat --string=kitty --description="Your best friend, but doesn't always show it."
+	// Cat is a cat
+	Cat --string=kitty --description="Your best friend, but doesn't always show it."
+			--default
 
-// Horse is a horse (of course)
-Horse --string=horsie --description="Everyone loves horses."
+	// Horse is a horse (of course)
+	Horse --string=horsie --description="Everyone loves horses."
 
 */
 
