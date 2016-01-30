@@ -39,7 +39,6 @@ var enum_tmpl = `
 {{- range $enum := .}}
 {{- $intType := .GetIntType}}
 {{- $uniqField := .GetUniqueName}}
-{{- $self := .GetReceiverName}}
 {{- $variantType := printf "%sEnum" $enum.Name}}
 
 /*****************************
@@ -71,18 +70,18 @@ func init() {
 }
 
 // Value returns the numeric value of the variant as a {{$intType}}.
-func ({{$self}} {{$variantType}}) Value() {{$intType}} {
-	return {{$self}}.{{$uniqField}}
+func (self {{$variantType}}) Value() {{$intType}} {
+	return self.{{$uniqField}}
 }
 
 // IntValue is the same as 'Value()', except that the value is cast to an 'int'.
-func ({{$self}} {{$variantType}}) IntValue() int {
-	return int({{$self}}.{{$uniqField}})
+func (self {{$variantType}}) IntValue() int {
+	return int(self.{{$uniqField}})
 }
 
 // Name returns the name of the variant as a string.
-func ({{$self}} {{$variantType}}) Name() string {
-	switch {{$self}}.{{$uniqField}} {
+func (self {{$variantType}}) Name() string {
+	switch self.{{$uniqField}} {
 	{{range $f := .Fields -}}
 	case {{$f.Value}}:
 		return {{printf "%q" $f.Name}}
@@ -93,12 +92,12 @@ func ({{$self}} {{$variantType}}) Name() string {
 }
 
 // Type returns the variant's type name as a string.
-func ({{$self}} {{$variantType}}) Type() string {
+func (self {{$variantType}}) Type() string {
 	return {{printf "%q" $variantType}}
 }
 
 // Namespace returns the variant's namespace name as a string.
-func ({{$self}} {{$variantType}}) Namespace() string {
+func (self {{$variantType}}) Namespace() string {
 	return {{printf "%q" $enum.Name}}
 }
 
@@ -113,8 +112,8 @@ func (self {{$variantType}}) IsDefault() bool {
 // If multiple bit values are assigned, the string values will be joined into a
 // single string using "{{.FlagSep}}" as a separator.
 {{- end}}
-func ({{$self}} {{$variantType}}) String() string {
-	switch {{$self}}.{{$uniqField}} {
+func (self {{$variantType}}) String() string {
+	switch self.{{$uniqField}} {
 	{{range $f := .Fields -}}
 	case {{$f.Value}}:
 		return {{printf "%q" $f.String}}
@@ -122,14 +121,14 @@ func ({{$self}} {{$variantType}}) String() string {
   }
 
 	{{if .IsBitflag -}}
-	if {{$self}}.{{$uniqField}} == 0 {
+	if self.{{$uniqField}} == 0 {
 		return ""
 	}
 
 	var vals = make([]string, 0, {{len .Fields}}/2)
 
 	for _, item := range {{$enum.Name}}.{{.GetIterName}} {
-		if {{$self}}.{{$uniqField}} & item.{{$uniqField}} == item.{{$uniqField}} {
+		if self.{{$uniqField}} & item.{{$uniqField}} == item.{{$uniqField}} {
 			vals = append(vals, item.String())
 		}
 	}
@@ -141,8 +140,8 @@ func ({{$self}} {{$variantType}}) String() string {
 
 // Description returns the description of the variant. If none has been set, its
 // return value is as though 'String()' had been called.
-func ({{$self}} {{$variantType}}) Description() string {
-  switch {{$self}}.{{$uniqField}} {
+func (self {{$variantType}}) Description() string {
+  switch self.{{$uniqField}} {
 	{{range $f := .Fields -}}
 	case {{$f.Value}}:
 		return {{printf "%q" $f.Description}}
@@ -154,17 +153,17 @@ func ({{$self}} {{$variantType}}) Description() string {
 {{if $enum.DoJson -}}
 // JSON marshaling methods
 {{if $enum.JsonMarshalIsString -}}
-func ({{$self}} {{$variantType}}) MarshalJSON() ([]byte, error) {
-  return []byte(strconv.Quote({{$self}}.String())), nil
+func (self {{$variantType}}) MarshalJSON() ([]byte, error) {
+  return []byte(strconv.Quote(self.String())), nil
 }
 {{- else -}}
-func ({{$self}} {{$variantType}}) MarshalJSON() ([]byte, error) {
-  return []byte(strconv.Itoa(int({{$self}}.{{$uniqField}}))), nil
+func (self {{$variantType}}) MarshalJSON() ([]byte, error) {
+  return []byte(strconv.Itoa(int(self.{{$uniqField}}))), nil
 }
 {{- end}}
 
 {{if $enum.JsonUnmarshalIsString -}}
-func ({{$self}} *{{$variantType}}) UnmarshalJSON(b []byte) error {
+func (self *{{$variantType}}) UnmarshalJSON(b []byte) error {
 	var s, err = strconv.Unquote(string(b))
 	if err != nil {
 		return err
@@ -177,7 +176,7 @@ func ({{$self}} *{{$variantType}}) UnmarshalJSON(b []byte) error {
 	switch s {
 	{{range $f := .Fields -}}
 	case {{printf "%q" $f.String}}:
-		{{$self}}.{{$uniqField}} = {{$f.Value}}
+		self.{{$uniqField}} = {{$f.Value}}
 		return nil
 	{{end -}}
 	{{if not .IsBitflag -}}
@@ -200,18 +199,18 @@ func ({{$self}} *{{$variantType}}) UnmarshalJSON(b []byte) error {
 		}
 	}
 
-	{{$self}}.{{$uniqField}} = {{$intType}}(val)
+	self.{{$uniqField}} = {{$intType}}(val)
 	{{end -}}
 
 	return nil
 }
 {{else -}}
-func ({{$self}} *{{$variantType}}) UnmarshalJSON(b []byte) error {
+func (self *{{$variantType}}) UnmarshalJSON(b []byte) error {
 	var n, err = strconv.ParseUint(string(b), 10, 64)
 	if err != nil {
 		return err
 	}
-	{{$self}}.{{$uniqField}} = {{$intType}}(n)
+	self.{{$uniqField}} = {{$intType}}(n)
 	return nil
 }
 {{- end}}
@@ -225,45 +224,45 @@ func ({{$self}} *{{$variantType}}) UnmarshalJSON(b []byte) error {
 // Bitflag enum methods
 
 // Add returns a copy of the variant with the value of 'v' added to it.
-func ({{$self}} {{$variantType}}) Add(v {{$variantType}}) {{$variantType}} {
-	{{$self}}.{{$uniqField}} |= v.{{$uniqField}}
-	return {{$self}}
+func (self {{$variantType}}) Add(v {{$variantType}}) {{$variantType}} {
+	self.{{$uniqField}} |= v.{{$uniqField}}
+	return self
 }
 
 // AddAll returns a copy of the variant with all the values of 'v' added to it.
-func ({{$self}} {{$variantType}}) AddAll(v ...{{$variantType}}) {{$variantType}} {
+func (self {{$variantType}}) AddAll(v ...{{$variantType}}) {{$variantType}} {
 	for _, item := range v {
-		{{$self}}.{{$uniqField}} |= item.{{$uniqField}}
+		self.{{$uniqField}} |= item.{{$uniqField}}
 	}
-	return {{$self}}
+	return self
 }
 
 // Remove returns a copy of the variant with the value of 'v' removed from it.
-func ({{$self}} {{$variantType}}) Remove(v {{$variantType}}) {{$variantType}} {
-	{{$self}}.{{$uniqField}} &^= v.{{$uniqField}}
-	return {{$self}}
+func (self {{$variantType}}) Remove(v {{$variantType}}) {{$variantType}} {
+	self.{{$uniqField}} &^= v.{{$uniqField}}
+	return self
 }
 
 // RemoveAll returns a copy of the variant with all the values of 'v' removed
 // from it.
-func ({{$self}} {{$variantType}}) RemoveAll(v ...{{$variantType}}) {{$variantType}} {
+func (self {{$variantType}}) RemoveAll(v ...{{$variantType}}) {{$variantType}} {
 	for _, item := range v {
-		{{$self}}.{{$uniqField}} &^= item.{{$uniqField}}
+		self.{{$uniqField}} &^= item.{{$uniqField}}
 	}
-	return {{$self}}
+	return self
 }
 
 // Has returns 'true' if the receiver contains the value of 'v', otherwise
 // 'false'.
-func ({{$self}} {{$variantType}}) Has(v {{$variantType}}) bool {
-	return {{$self}}.{{$uniqField}}&v.{{$uniqField}} == v.{{$uniqField}}
+func (self {{$variantType}}) Has(v {{$variantType}}) bool {
+	return self.{{$uniqField}}&v.{{$uniqField}} == v.{{$uniqField}}
 }
 
 // HasAny returns 'true' if the receiver contains any of the values of 'v',
 // otherwise 'false'.
-func ({{$self}} {{$variantType}}) HasAny(v ...{{$variantType}}) bool {
+func (self {{$variantType}}) HasAny(v ...{{$variantType}}) bool {
 	for _, item := range v {
-		if {{$self}}.{{$uniqField}}&item.{{$uniqField}} == item.{{$uniqField}} {
+		if self.{{$uniqField}}&item.{{$uniqField}} == item.{{$uniqField}} {
 			return true
 		}
 	}
@@ -272,9 +271,9 @@ func ({{$self}} {{$variantType}}) HasAny(v ...{{$variantType}}) bool {
 
 // HasAll returns 'true' if the receiver contains all the values of 'v',
 // otherwise 'false'.
-func ({{$self}} {{$variantType}}) HasAll(v ...{{$variantType}}) bool {
+func (self {{$variantType}}) HasAll(v ...{{$variantType}}) bool {
 	for _, item := range v {
-		if {{$self}}.{{$uniqField}}&item.{{$uniqField}} != item.{{$uniqField}} {
+		if self.{{$uniqField}}&item.{{$uniqField}} != item.{{$uniqField}} {
 			return false
 		}
 	}

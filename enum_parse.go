@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
-	"unicode/utf8"
 )
 
 const (
@@ -39,11 +38,6 @@ type EnumFieldRepr struct {
 
 func (self *EnumRepr) GetUniqueName() string {
 	return "value_" + self.getUniqueId()
-}
-
-func (self *EnumRepr) GetReceiverName() string {
-	r, _ := utf8.DecodeRuneInString(self.Name)
-	return string(r) + "e"
 }
 
 func (self *EnumRepr) DoSummary() bool { return self.flags&summary == summary }
