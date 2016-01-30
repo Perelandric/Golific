@@ -117,7 +117,21 @@ func (self *FileData) doEnum(cgText string, docs []string) (string, string, erro
 
 	self.Enums = append(self.Enums, &enum)
 
-	return cgText, enum.Name, nil
+	return cgText, enum.Name, enum.validate()
+}
+
+func (self *EnumRepr) validate() error {
+	var def string
+
+	for _, f := range self.Fields {
+		if f.flags&hasDefault == hasDefault { // Only one --default variant allowed
+			if len(def) > 0 {
+				return fmt.Errorf("--default was previously defined on %q", def)
+			}
+			def = f.Name
+		}
+	}
+	return nil
 }
 
 func (self *EnumRepr) doFields(cgText string) (_ string, err error) {

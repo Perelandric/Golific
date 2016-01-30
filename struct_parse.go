@@ -104,17 +104,22 @@ func (self *FileData) doStruct(cgText string, docs []string) (string, string, er
 		return cgText, strct.Name, err
 	}
 
-	if strct.flags&dropCtor == dropCtor && len(strct.Constructor) > 0 {
-		log.Printf("WARNING: %q: found --drop_ctor and --ctor_name\n", strct.Name)
-	}
-
 	if cgText, err = strct.doFields(cgText); err != nil {
 		return cgText, strct.Name, err
 	}
 
 	self.Structs = append(self.Structs, &strct)
 
-	return cgText, strct.Name, nil
+	return cgText, strct.Name, strct.validate()
+}
+
+func (self *StructRepr) validate() error {
+
+	if self.flags&dropCtor == dropCtor && len(self.Constructor) > 0 {
+		log.Printf("WARNING: %q: found --drop_ctor and --ctor_name\n", self.Name)
+	}
+
+	return nil
 }
 
 func (self *StructRepr) doFields(cgText string) (_ string, err error) {
