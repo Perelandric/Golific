@@ -134,10 +134,13 @@ func (self *EnumRepr) validate() error {
 }
 
 func (self *EnumRepr) doFields(cgText string) (_ string, err error) {
-	for len(cgText) > 0 && getPrefix(cgText, false) == "" {
+	for len(cgText) > 0 {
+		var foundPrefix bool
 		var f = EnumFieldRepr{}
 
-		cgText = f.gatherCodeComments(cgText)
+		if cgText, foundPrefix = f.gatherCodeComments(cgText); foundPrefix {
+			return cgText, nil
+		}
 
 		if cgText, f.Name, err = getIdent(cgText); err != nil {
 			return cgText, err

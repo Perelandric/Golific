@@ -74,15 +74,25 @@ type BaseFieldRepr struct {
 	Base
 }
 
-func (self *BaseFieldRepr) gatherCodeComments(cgText string) string {
+// Gathers code comments. Comments are abandoned if a @prefix is found after.
+func (self *BaseFieldRepr) gatherCodeComments(cgText string) (string, bool) {
 	var commentLine string
+	temp := cgText
 
-	for strings.HasPrefix(cgText, "//") {
-		cgText, commentLine = getLine(cgText[2:])
+	for strings.HasPrefix(temp, "//") {
+		temp, commentLine = getLine(temp[2:])
 		self.docs = append(self.docs, commentLine)
+
+		temp = strings.TrimSpace(temp)
 	}
 
-	return cgText
+	if getPrefix(temp) != "" {
+		// These comments are for the next descriptor, so abandon them
+		self.docs = nil
+		return cgText, true
+	}
+
+	return temp, false
 }
 
 func getFlagWord(source string) (_, word string, err error) {

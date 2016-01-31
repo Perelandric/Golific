@@ -124,10 +124,13 @@ func (self *StructRepr) validate() error {
 
 func (self *StructRepr) doFields(cgText string) (_ string, err error) {
 
-	for len(cgText) > 0 && getPrefix(cgText, false) == "" {
+	for len(cgText) > 0 {
+		var foundPrefix bool
 		var f = StructFieldRepr{}
 
-		cgText = f.gatherCodeComments(cgText)
+		if cgText, foundPrefix = f.gatherCodeComments(cgText); foundPrefix {
+			return cgText, nil
+		}
 
 		var leadingNewline, foundStr, isEmbedded, wasQuote bool
 

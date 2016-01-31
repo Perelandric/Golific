@@ -81,7 +81,14 @@ func (self *FileData) doComment(c *ast.Comment) {
 	for {
 		cgText = strings.TrimSpace(cgText)
 
-		if prefix = getPrefix(cgText, true); prefix == "" {
+		if strings.HasPrefix(cgText, "//") {
+			var line string
+			cgText, line = getLine(cgText[2:])
+			docs = append(docs, line)
+			continue
+		}
+
+		if prefix = getPrefix(cgText); prefix == "" {
 			break
 		}
 
@@ -95,12 +102,6 @@ func (self *FileData) doComment(c *ast.Comment) {
 		var parser func(string, []string) (string, string, error)
 
 		switch prefix {
-		case "//":
-			var line string
-			cgText, line = getLine(cgText)
-			docs = append(docs, line)
-			continue
-
 		case "@enum":
 			log.SetPrefix("golific-enum: ")
 			parser = self.doEnum
@@ -135,11 +136,8 @@ func (self *FileData) doComment(c *ast.Comment) {
 	}
 }
 
-func getPrefix(cgText string, includeComment bool) string {
-	for i, prefix := range [...]string{"//", "@enum", "@struct"} {
-		if i == 0 && !includeComment {
-			continue
-		}
+func getPrefix(cgText string) string {
+	for _, prefix := range [...]string{"@enum", "@struct"} {
 		if strings.HasPrefix(cgText, prefix) {
 			return prefix
 		}
@@ -150,7 +148,7 @@ func getPrefix(cgText string, includeComment bool) string {
 func nextDescriptor(cgText string) int {
 	for i := 0; i < len(cgText); i++ {
 		if cgText[i] == '@' {
-			if prefix := getPrefix(cgText, false); prefix != "" {
+			if prefix := getPrefix(cgText); prefix != "" {
 				return i
 			}
 		}
