@@ -42,7 +42,7 @@ func init() {
 }
 
 func (self *StructDefaults) gatherFlags(cgText string) (string, error) {
-	cgText, flags, _, err := self.genericGatherFlags(cgText, false)
+	cgText, flags, _, err := self.genericGatherFlags(cgText, self == &structDefaults)
 	if err != nil {
 		return cgText, err
 	}
