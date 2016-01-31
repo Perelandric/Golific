@@ -20,12 +20,16 @@ const (
 	hasCustomValue
 )
 
-type EnumRepr struct {
+type EnumDefaults struct {
 	BaseRepr
-	Name     string
-	FlagSep  string
-	iterName string
-	Fields   []*EnumFieldRepr
+	FlagSep  string // ""
+	iterName string // "Values"
+}
+
+type EnumRepr struct {
+	EnumDefaults
+	Name   string
+	Fields []*EnumFieldRepr
 }
 
 type EnumFieldRepr struct {
@@ -34,6 +38,93 @@ type EnumFieldRepr struct {
 	String      string
 	Description string
 	Value       int64
+}
+
+var enumDefaults EnumDefaults
+
+func init() {
+	enumDefaults.FlagSep = ""
+	enumDefaults.iterName = "Values"
+	enumDefaults.flags = 0
+}
+
+func (self *EnumDefaults) gatherFlags(cgText string) (string, error) {
+	cgText, flags, _, err := self.genericGatherFlags(cgText, false)
+	if err != nil {
+		return cgText, err
+	}
+
+	for _, flag := range flags {
+		switch strings.ToLower(flag.Name) {
+
+		case "bitflags": // The enum values are to be bitflags
+			if err = self.doBooleanFlag(flag, bitflags); err != nil {
+				return cgText, err
+			}
+
+		case "bitflag_separator": // The separator used when joining bitflags
+			if self.FlagSep, err = flag.getNonEmpty(); err != nil {
+				return cgText, err
+			}
+
+		case "iterator_name": // Custom Name for Array of values
+			if self.iterName, err = flag.getIdent(); err != nil {
+				return cgText, err
+			}
+
+		case "summary": // Include a summary of this enum at the top of the file
+			if err = self.doBooleanFlag(flag, summary); err != nil {
+				return cgText, err
+			}
+
+		case "json": // Set type of JSON marshaler and unmarshaler
+			err = self.setMarshal(flag, jsonMarshalIsString|jsonUnmarshalIsString)
+			if err != nil {
+				return cgText, err
+			}
+			/*
+				case "xml": // Set type of XML marshaler and unmarshaler
+					err = self.setMarshal(flag, xmlMarshalIsString|xmlUnmarshalIsString)
+					if err != nil {
+						return cgText, err
+					}
+			*/
+		case "json_marshal": // Set type of JSON marshaler
+			if err = self.setMarshal(flag, jsonMarshalIsString); err != nil {
+				return cgText, err
+			}
+
+		case "json_unmarshal": // Set type of JSON unmarshaler
+			if err = self.setMarshal(flag, jsonUnmarshalIsString); err != nil {
+				return cgText, err
+			}
+			/*
+				case "xml_marshal": // Set type of XML marshaler
+					if err = self.setMarshal(flag, xmlMarshalIsString); err != nil {
+						return cgText, err
+					}
+
+				case "xml_unmarshal": // Set type of XML unmarshaler
+					if err = self.setMarshal(flag, xmlUnmarshalIsString); err != nil {
+						return cgText, err
+					}
+			*/
+		case "drop_json": // Do not generate JSON marshaling methods
+			if err = self.doBooleanFlag(flag, dropJson); err != nil {
+				return cgText, err
+			}
+			/*
+				case "drop_xml": // Do not generate XML marshaling methods
+					if err = self.doBooleanFlag(flag, dropXml); err != nil {
+						return cgText, err
+					}
+			*/
+		default:
+			return cgText, fmt.Errorf("Unknown flag %q", flag.Name)
+		}
+	}
+
+	return cgText, nil
 }
 
 func (self *EnumRepr) GetUniqueName() string {
@@ -77,17 +168,17 @@ func (repr *EnumRepr) GetIntType() string {
 	return "uint64"
 }
 
-func (self *FileData) doEnum(cgText string, docs []string) (string, string, error) {
-	enum := EnumRepr{
-		BaseRepr: BaseRepr{
-			Base: Base{
-				docs: docs,
-			},
-		},
-		iterName: "Values",
-	}
+func (self *FileData) doEnumDefaults(cgText string) (string, error) {
+	return enumDefaults.gatherFlags(cgText)
+}
 
+func (self *FileData) doEnum(cgText string, docs []string) (string, string, error) {
 	var err error
+
+	enum := EnumRepr{
+		EnumDefaults: enumDefaults, // copy of current defaults
+	}
+	enum.EnumDefaults.Base.docs = docs
 
 	if !unicode.IsSpace(rune(cgText[0])) {
 		return cgText, "",
@@ -186,85 +277,6 @@ func (self *EnumRepr) doFields(cgText string) (_ string, err error) {
 	return cgText, nil
 }
 
-func (self *EnumRepr) gatherFlags(cgText string) (string, error) {
-	cgText, flags, _, err := self.genericGatherFlags(cgText, false)
-	if err != nil {
-		return cgText, err
-	}
-
-	for _, flag := range flags {
-		switch strings.ToLower(flag.Name) {
-
-		case "bitflags": // The enum values are to be bitflags
-			if err = self.doBooleanFlag(flag, bitflags); err != nil {
-				return cgText, err
-			}
-
-		case "bitflag_separator": // The separator used when joining bitflags
-			if self.FlagSep, err = flag.getNonEmpty(); err != nil {
-				return cgText, err
-			}
-
-		case "iterator_name": // Custom Name for Array of values
-			if self.iterName, err = flag.getIdent(); err != nil {
-				return cgText, err
-			}
-
-		case "summary": // Include a summary of this enum at the top of the file
-			if err = self.doBooleanFlag(flag, summary); err != nil {
-				return cgText, err
-			}
-
-		case "json": // Set type of JSON marshaler and unmarshaler
-			err = self.setMarshal(flag, jsonMarshalIsString|jsonUnmarshalIsString)
-			if err != nil {
-				return cgText, err
-			}
-			/*
-				case "xml": // Set type of XML marshaler and unmarshaler
-					err = self.setMarshal(flag, xmlMarshalIsString|xmlUnmarshalIsString)
-					if err != nil {
-						return cgText, err
-					}
-			*/
-		case "json_marshal": // Set type of JSON marshaler
-			if err = self.setMarshal(flag, jsonMarshalIsString); err != nil {
-				return cgText, err
-			}
-
-		case "json_unmarshal": // Set type of JSON unmarshaler
-			if err = self.setMarshal(flag, jsonUnmarshalIsString); err != nil {
-				return cgText, err
-			}
-			/*
-				case "xml_marshal": // Set type of XML marshaler
-					if err = self.setMarshal(flag, xmlMarshalIsString); err != nil {
-						return cgText, err
-					}
-
-				case "xml_unmarshal": // Set type of XML unmarshaler
-					if err = self.setMarshal(flag, xmlUnmarshalIsString); err != nil {
-						return cgText, err
-					}
-			*/
-		case "drop_json": // Do not generate JSON marshaling methods
-			if err = self.doBooleanFlag(flag, dropJson); err != nil {
-				return cgText, err
-			}
-			/*
-				case "drop_xml": // Do not generate XML marshaling methods
-					if err = self.doBooleanFlag(flag, dropXml); err != nil {
-						return cgText, err
-					}
-			*/
-		default:
-			return cgText, fmt.Errorf("Unknown flag %q", flag.Name)
-		}
-	}
-
-	return cgText, nil
-}
-
 func (self *EnumFieldRepr) gatherFlags(cgText string) (string, error) {
 
 	const errCustomDefault = "A --value can not be assigned on a --default variant"
@@ -326,7 +338,7 @@ func (self *EnumFieldRepr) gatherFlags(cgText string) (string, error) {
 	return cgText, nil
 }
 
-func (self *EnumRepr) setMarshal(flag Flag, flags uint) error {
+func (self *EnumDefaults) setMarshal(flag Flag, flags uint) error {
 	if _, err := flag.getNonEmpty(); err != nil {
 		return err
 	}

@@ -9,20 +9,21 @@ import (
 
 /*
 @enum Foo --bitflags --bitflag_separator=","
-					--iterator_name="foobar" --json=string --summary
+					--iterator_name="foobar" --json=string
 	Bar --string=bar
 	Baz --string=baz --description="This is the description"
 	Buz
+
+@enum-defaults --summary
 
 @enum Oof
 	Bar --string="bar"
 	Baz --value = 123
 	Buz --description="Some description"
-*/
 
-/*
+
 // An enum to test the @enum descriptor
-@enum Animal --json=string --summary
+@enum Animal --json=string
 
 	// Dog is a dog
 	Dog --string=doggy
@@ -35,9 +36,6 @@ import (
 	// Horse is a horse (of course)
 	Horse --string=horsie --description="Everyone loves horses."
 
-*/
-
-/*
 // A struct to test the @struct descriptor
 //
 // And another line or two for good measure

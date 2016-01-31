@@ -9,6 +9,8 @@ import (
 	"unicode/utf8"
 )
 
+const _defaults = "-defaults"
+
 type Flag struct {
 	Name       string
 	Value      string

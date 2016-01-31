@@ -14,11 +14,15 @@ const (
 	embedded
 )
 
-type StructRepr struct {
+type StructDefaults struct {
 	BaseRepr
-	Name        string
 	Constructor string
-	Fields      []*StructFieldRepr
+}
+
+type StructRepr struct {
+	StructDefaults
+	Name   string
+	Fields []*StructFieldRepr
 }
 
 type StructFieldRepr struct {
@@ -29,6 +33,50 @@ type StructFieldRepr struct {
 	Read        string // Method name for reads
 	Write       string // Method name for writes
 	DefaultExpr string // Default expression
+}
+
+var structDefaults StructDefaults
+
+func init() {
+	structDefaults.flags = 0
+}
+
+func (self *StructDefaults) gatherFlags(cgText string) (string, error) {
+	cgText, flags, _, err := self.genericGatherFlags(cgText, false)
+	if err != nil {
+		return cgText, err
+	}
+
+	for _, flag := range flags {
+		switch strings.ToLower(flag.Name) {
+		case "drop_json": // Do not generate JSON marshaling methods
+			if err = self.doBooleanFlag(flag, dropJson); err != nil {
+				return cgText, err
+			}
+
+		case "drop_ctor": // Do not generate default constructor function
+			if err = self.doBooleanFlag(flag, dropCtor); err != nil {
+				return cgText, err
+			}
+
+		case "ctor_name": // Custom name for the default constructor
+			if self == (&structDefaults) { // Only if we're not setting defaults
+				if self.Constructor, err = flag.getIdent(); err != nil {
+					return cgText, err
+
+				} else {
+					continue
+				}
+			}
+
+			fallthrough // Not available as a default value
+
+		default:
+			return cgText, fmt.Errorf("Unknown flag %q", flag.Name)
+		}
+	}
+
+	return cgText, nil
 }
 
 func (self *StructRepr) GetPrivateTypeName() string {
@@ -74,16 +122,17 @@ func (self *StructFieldRepr) GetNameMaybeType() string {
 	return strings.TrimLeft(self.Name, "*")
 }
 
-func (self *FileData) doStruct(cgText string, docs []string) (string, string, error) {
-	strct := StructRepr{
-		BaseRepr: BaseRepr{
-			Base: Base{
-				docs: docs,
-			},
-		},
-	}
+func (self *FileData) doStructDefaults(cgText string) (string, error) {
+	return structDefaults.gatherFlags(cgText)
+}
 
+func (self *FileData) doStruct(cgText string, docs []string) (string, string, error) {
 	var err error
+
+	strct := StructRepr{
+		StructDefaults: structDefaults, // copy of current defaults
+	}
+	strct.StructDefaults.Base.docs = docs
 
 	if !unicode.IsSpace(rune(cgText[0])) {
 		return cgText, "",
@@ -205,37 +254,6 @@ func (self *StructRepr) doFields(cgText string) (_ string, err error) {
 
 	if len(self.Fields) == 0 {
 		return cgText, fmt.Errorf("Enums must have at least one variant defined")
-	}
-
-	return cgText, nil
-}
-
-func (self *StructRepr) gatherFlags(cgText string) (string, error) {
-	cgText, flags, _, err := self.genericGatherFlags(cgText, false)
-	if err != nil {
-		return cgText, err
-	}
-
-	for _, flag := range flags {
-		switch strings.ToLower(flag.Name) {
-		case "drop_json": // Do not generate JSON marshaling methods
-			if err = self.doBooleanFlag(flag, dropJson); err != nil {
-				return cgText, err
-			}
-
-		case "drop_ctor": // Do not generate default constructor function
-			if err = self.doBooleanFlag(flag, dropCtor); err != nil {
-				return cgText, err
-			}
-
-		case "ctor_name": // Custom name for the default constructor
-			if self.Constructor, err = flag.getIdent(); err != nil {
-				return cgText, err
-			}
-
-		default:
-			return cgText, fmt.Errorf("Unknown flag %q", flag.Name)
-		}
 	}
 
 	return cgText, nil

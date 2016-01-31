@@ -99,22 +99,26 @@ func (self *FileData) doComment(c *ast.Comment) {
 			break
 		}
 
-		var parser func(string, []string) (string, string, error)
+		log.SetPrefix(fmt.Sprintf("golific-%s: ", prefix))
 
 		switch prefix {
 		case "@enum":
-			log.SetPrefix("golific-enum: ")
-			parser = self.doEnum
+			cgText, name, err = self.doEnum(cgText, docs)
 
 		case "@struct":
-			log.SetPrefix("golific-struct: ")
-			parser = self.doStruct
+			cgText, name, err = self.doStruct(cgText, docs)
+
+		case "@enum-defaults":
+			cgText, err = self.doEnumDefaults(cgText)
+
+		case "@struct-defaults":
+			cgText, err = self.doStructDefaults(cgText)
 
 		default:
 			log.Fatalf("Unknown prefix %q\n", prefix)
 		}
 
-		if cgText, name, err = parser(cgText, docs); err != nil {
+		if err != nil {
 			if len(name) > 0 {
 				log.Printf("%s: %s\n", name, err)
 			} else {
@@ -137,7 +141,9 @@ func (self *FileData) doComment(c *ast.Comment) {
 }
 
 func getPrefix(cgText string) string {
-	for _, prefix := range [...]string{"@enum", "@struct"} {
+	for _, prefix := range [...]string{
+		"@enum-defaults", "@enum", "@struct-defaults", "@struct",
+	} {
 		if strings.HasPrefix(cgText, prefix) {
 			return prefix
 		}
