@@ -8,6 +8,16 @@ import (
 //go:generate Golific $GOFILE
 
 /*
+
+@union TestUnion
+	FooEnum
+	AnimalEnum
+	Tester
+
+@union AnotherUnion
+	Tester
+	OofEnum
+
 @enum Foo --bitflags --bitflag_separator=","
 					--iterator_name="foobar" --json=string
 	Bar --string=bar

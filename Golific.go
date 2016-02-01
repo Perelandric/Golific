@@ -36,6 +36,7 @@ type FileData struct {
 	File    string
 	Enums   []*EnumRepr
 	Structs []*StructRepr
+	Unions  []*UnionRepr
 	Imports map[string]bool
 }
 
@@ -108,11 +109,17 @@ func (self *FileData) doComment(c *ast.Comment) {
 		case "@struct":
 			cgText, name, err = self.doStruct(cgText, docs)
 
+		case "@union":
+			cgText, name, err = self.doUnion(cgText, docs)
+
 		case "@enum-defaults":
 			cgText, err = self.doEnumDefaults(cgText)
 
 		case "@struct-defaults":
 			cgText, err = self.doStructDefaults(cgText)
+
+		case "@union-defaults":
+			cgText, err = self.doUnionDefaults(cgText)
 
 		default:
 			log.Fatalf("Unknown prefix %q\n", prefix)
@@ -142,7 +149,9 @@ func (self *FileData) doComment(c *ast.Comment) {
 
 func getPrefix(cgText string) string {
 	for _, prefix := range [...]string{
-		"@enum-defaults", "@enum", "@struct-defaults", "@struct",
+		"@enum-defaults", "@enum",
+		"@struct-defaults", "@struct",
+		"@union-defaults", "@union",
 	} {
 		if strings.HasPrefix(cgText, prefix) {
 			return prefix
