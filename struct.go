@@ -350,7 +350,6 @@ func (self *FileData) GatherStructImports() {
 	self.Imports["encoding/json"] = true
 }
 
-// If any EnumRepr is `bitflag`, `strings` is needed
 func (self *FileData) DoStructSummary() bool {
 	return false
 }
