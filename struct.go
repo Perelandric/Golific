@@ -142,7 +142,7 @@ func (self *FileData) doStruct(cgText string, docs []string) (string, string, er
 	cgText, foundNewline := trimLeftCheckNewline(cgText)
 	if foundNewline {
 		return cgText, "",
-			fmt.Errorf("The name must be on the same line as the @enum")
+			fmt.Errorf("The name must be on the same line as the @struct")
 	}
 
 	if cgText, strct.Name, err = getIdent(cgText); err != nil {
