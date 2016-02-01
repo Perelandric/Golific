@@ -53,10 +53,10 @@ import (
 	*AnimalEnum --default_expr="&Animal.Dog"
 
 	// The first item
-	Test1 string `json:"test1"`
+	Test1 string `json:"tester1"`
 
 	Test2 string --read --default_expr=`"foo"`
-	Test3 string --write
+	Test3 string `json:"tester3,omitempty"` --write
 
 	// The fourth item
 	Test4 string --read --write --default_expr=`"bar"`

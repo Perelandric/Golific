@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -112,6 +113,36 @@ func (self *StructFieldRepr) IsPublic() bool {
 func (self *StructFieldRepr) GetSpaceAndTag() string {
 	if len(self.Tag) > 0 {
 		return fmt.Sprintf(" `%s`", self.Tag)
+	}
+	return ""
+}
+
+func (self *StructFieldRepr) CouldBeJSON() bool {
+	return isExportedIdent(self.Name) && !self.IsEmbedded()
+}
+
+func (self *StructFieldRepr) PossibleJSONKeys() string {
+	if t := self.getJSONFieldTagName(); t != "" {
+		return strconv.Quote(t)
+	}
+	return strings.Join([]string{
+		strconv.Quote(self.Name),
+		strconv.Quote(strings.ToLower(string(self.Name[0])) + self.Name[1:]),
+	}, ", ")
+}
+
+func (self *StructFieldRepr) getJSONFieldTagName() string {
+	if idx := strings.Index(self.Tag, `json:"`); idx != -1 {
+		t := self.Tag[idx+6:] // Found a valid start to the JSON field tag
+
+		if idx = strings.IndexByte(t, '"'); idx != -1 {
+			t = t[0:idx] // Found the closing quote, so it's valid
+
+			if idx = strings.IndexByte(t, ','); idx != -1 {
+				return t[0:idx] // Found a comma, so the name comes before it
+			}
+			return t // No comma found, so all we have is a name
+		}
 	}
 	return ""
 }
@@ -450,16 +481,39 @@ func (self *{{$struct.Name}}) MarshalJSON() ([]byte, error) {
 }
 
 func (self *{{$struct.Name}}) UnmarshalJSON(j []byte) error {
-  var temp {{$jsonType}}
-  if err := json.Unmarshal(j, &temp); err != nil {
-    return err
-  }
-  self.private = *temp.{{$privateType}}
-  {{range $f := $struct.Fields -}}
-  {{if or $f.IsEmbedded $f.IsPublic -}}
-  self.{{$f.GetNameMaybeType}} = temp.{{$f.GetNameMaybeType}}
-  {{end -}}
-  {{end -}}
+	if len(j) == 4 && string(j) == "null" {
+		return nil
+	}
+
+	m := make(map[string]json.RawMessage)
+
+	err := json.Unmarshal(j, &m)
+	if err != nil {
+		return err
+	}
+
+	// For every property found, perform a separate UnmarshalJSON operation. This
+	// prevents overwrite of values in 'self' where properties are absent.
+	for key, rawMsg := range m {
+		switch key {
+		{{- range $f := $struct.Fields -}}
+		{{if $f.CouldBeJSON}}
+		case {{$f.PossibleJSONKeys}}:
+		{{- if $f.IsPublic}}
+	    err = json.Unmarshal(rawMsg, &self.{{$f.Name}})
+		{{- else -}}
+	    err = json.Unmarshal(rawMsg, &self.private.{{$f.Name}})
+		{{- end -}}
+		{{end -}}
+		{{end}}
+		default:
+			// Ignoring unknown property
+		}
+
+	  if err != nil {
+	    return err
+	  }
+	}
   return nil
 }
 {{end -}}
