@@ -253,7 +253,7 @@ func (self *StructRepr) doFields(cgText string) (_ string, err error) {
 	}
 
 	if len(self.Fields) == 0 {
-		return cgText, fmt.Errorf("Enums must have at least one variant defined")
+		return cgText, fmt.Errorf("Structs must have at least one field defined")
 	}
 
 	return cgText, nil
