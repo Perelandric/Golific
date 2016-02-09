@@ -236,8 +236,8 @@ func (self *StructRepr) doFields(cgText string) (_ string, err error) {
 			continue
 		}
 
-		// We know it's not an embedded type, so make sure a `*` wasn't given at the
-		// start of the name. Using getIdent() just so we get the expected error.
+		// We know it's not an embedded type, so make sure it's a valid ident
+		// instead of a type. Using getIdent() just so we get the expected error.
 		if _, _, err = getIdent(f.Name); err != nil {
 			return cgText, err
 		}
@@ -293,9 +293,14 @@ func (self *StructRepr) doFields(cgText string) (_ string, err error) {
 func checkEmbedded(cgText string) (_ string, isEmbed, wasQuote bool) {
 	temp, isEmbed := trimLeftCheckNewline(cgText)
 
-	if isEmbed || len(temp) == 0 || strings.HasPrefix(temp, "--") {
+	if isFlag := strings.HasPrefix(temp, "--"); isFlag {
+		return temp, true, false
+	}
+
+	if isEmbed || len(temp) == 0 {
 		return cgText, true, false
 	}
+
 	if temp[0] == '`' || temp[0] == '"' {
 		return temp, true, true
 	}

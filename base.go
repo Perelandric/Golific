@@ -232,19 +232,19 @@ func trimLeftCheckNewline(s string) (string, bool) {
 func getString(source string, doSingle bool) (
 	_, val string, foundStr, foundNewline bool, err error) {
 
-	source, foundNewline = trimLeftCheckNewline(source)
+	temp, foundNewline := trimLeftCheckNewline(source)
 
-	if len(source) > 0 &&
-		(source[0] == '"' || source[0] == '`' || (doSingle && source[0] == '\'')) {
+	if len(temp) > 0 &&
+		(temp[0] == '"' || temp[0] == '`' || (doSingle && temp[0] == '\'')) {
 
-		var idx = strings.IndexByte(source[1:], source[0])
+		var idx = strings.IndexByte(temp[1:], temp[0])
 
 		if idx == -1 {
-			return source, "", false, foundNewline, fmt.Errorf("Missing closing quote")
+			return temp, "", false, foundNewline, fmt.Errorf("Missing closing quote")
 		}
 		idx += 1 // Because we started searching on the second character
 
-		return source[idx+1:], source[1:idx], true, foundNewline, nil
+		return temp[idx+1:], temp[1:idx], true, foundNewline, nil
 	}
 
 	return source, "", false, foundNewline, nil
