@@ -500,24 +500,29 @@ func (self *{{$struct.Name}}) UnmarshalJSON(j []byte) error {
 	// For every property found, perform a separate UnmarshalJSON operation. This
 	// prevents overwrite of values in 'self' where properties are absent.
 	for key, rawMsg := range m {
-		switch key {
+		switch key { // The anon structs in each case are needed for field tags
 		{{- range $f := $struct.Fields -}}
 		{{if $f.CouldBeJSON}}
 		case {{$f.PossibleJSONKeys}}:
-		{{- if $f.IsPublic}}
-	    err = json.Unmarshal(rawMsg, &self.{{$f.Name}})
-		{{- else -}}
-	    err = json.Unmarshal(rawMsg, &self.private.{{$f.Name}})
+
+		var x = struct {
+			F {{$f.Type}}{{$f.GetSpaceAndTag}}
+		}{}
+		if err = json.Unmarshal(rawMsg, &x.F); err != nil {
+			return err
+		}
+
+		{{if $f.IsPublic}}
+			self.{{$f.Name}} = x.F
+		{{else -}}
+			self.private.{{$f.Name}} = x.F
 		{{- end -}}
+
 		{{end -}}
 		{{end}}
 		default:
 			// Ignoring unknown property
 		}
-
-	  if err != nil {
-	    return err
-	  }
 	}
   return nil
 }
