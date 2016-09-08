@@ -8,7 +8,7 @@ import (
 //go:generate Golific $GOFILE
 
 /*
-@union
+@ union
 */
 /*
 type __TestUnion struct {
@@ -19,7 +19,7 @@ type __TestUnion struct {
 */
 
 /*
-@union
+@ union
 */
 /*
 type AnotherUnion struct {
@@ -51,7 +51,6 @@ type Oof struct {
 	Buz int `description:"Some description"`
 }
 
-
 /*
 @enum
 json:"string"
@@ -70,7 +69,6 @@ type Animal struct {
 	// Horse is a horse (of course)
 	Horse int `string:"horsie" description:"Everyone loves horses."`
 }
-
 
 /*
 @struct
