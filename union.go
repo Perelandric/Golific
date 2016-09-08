@@ -1,10 +1,32 @@
 package main
 
-import (
-	"fmt"
-	"strings"
-	"unicode"
-)
+/*
+// Generated
+type MyUnion interface{
+	_MyUnion_oijfjslkj()
+}
+
+// Generated
+type AnotherUnion interface{
+	_AnotherUnion_oijfjslkj()
+}
+
+// @union
+type MyUnion struct {
+	Foo
+	Bar
+	String
+}
+
+type Foo_MyUnion_oijfjslkj struct { *Foo }
+func (x *Foo_MyUnion_oijfjslkj) _MyUnion_oijfjslkj() {} // generated
+
+type Bar_MyUnion_oijfjslkj struct { *Bar }
+func (x *Bar_oijfjslkj) _MyUnion_oijfjslkj() {} // generated
+
+type String_MyUnion_oijfjslkj struct { String }
+func (x *String_MyUnion_oijfjslkj) _MyUnion_oijfjslkj() {} // generated
+*/
 
 type UnionDefaults struct {
 	BaseRepr
@@ -27,8 +49,10 @@ func init() {
 	unionDefaults.flags = 0
 }
 
+/*
+
 func (self *UnionDefaults) gatherFlags(cgText string) (string, error) {
-	cgText, flags, _, err := self.genericGatherFlags(cgText, self == &unionDefaults)
+	flags, _, err := self.genericGatherFlags(cgText, self == &unionDefaults)
 	if err != nil {
 		return cgText, err
 	}
@@ -98,7 +122,7 @@ func (self *UnionRepr) doFields(cgText string) (_ string, err error) {
 		var foundPrefix bool
 		var f = UnionFieldRepr{}
 
-		if cgText, foundPrefix = f.gatherCodeComments(cgText); foundPrefix {
+		if foundPrefix = f.gatherCodeComments(cgText); foundPrefix {
 			return cgText, nil
 		}
 
@@ -123,7 +147,7 @@ func (self *UnionRepr) doFields(cgText string) (_ string, err error) {
 func (self *UnionFieldRepr) gatherFlags(cgText string) (string, error) {
 	const warnExported = "WARNING: The %s method %q is not exported.\n"
 
-	cgText, flags, _, err := self.genericGatherFlags(cgText, true)
+	flags, _, err := self.genericGatherFlags(cgText, true)
 	if err != nil {
 		return cgText, err
 	}
@@ -149,7 +173,7 @@ func (self *FileData) GatherUnionImports() {
 func (self *FileData) DoUnionSummary() bool {
 	return false
 }
-
+*/
 var union_tmpl = `
 {{- define "generate_union"}}
 {{- range $union := .}}
@@ -161,7 +185,7 @@ var union_tmpl = `
 {{$union.Name}} union
 
 ******************************/
-
+/*
 type {{$union.Name}} interface {
   {{$methodName}}()
 }

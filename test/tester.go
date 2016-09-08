@@ -8,62 +8,94 @@ import (
 //go:generate Golific $GOFILE
 
 /*
-
-@union TestUnion
+@union
+*/
+/*
+type __TestUnion struct {
 	FooEnum
 	AnimalEnum
 	Tester
+}
+*/
 
-@union AnotherUnion
+/*
+@union
+*/
+/*
+type AnotherUnion struct {
 	Tester
 	OofEnum
+}
+*/
 
-@enum Foo --bitflags --bitflag_separator=","
-					--iterator_name="foobar" --json=string
-	Bar --string=bar
-	Baz --string=baz --description="This is the description"
-	Buz
+/*
+@enum
+bitflags bitflag_separator:"," iterator_name="foobar" json:"string"
+*/
+type Foo struct {
+	Bar int `string:bar`
+	Baz int `string:baz description:"This is the description"`
+	Buz int
+}
 
-@enum-defaults --summary
+/*
+@enum-defaults summary
+*/
 
-@enum Oof
-	Bar --string="bar"
-	Baz --value = 123
-	Buz --description="Some description"
+/*
+@enum
+*/
+type Oof struct {
+	Bar int `string:"bar"`
+	Baz int `value:123`
+	Buz int `description:"Some description"`
+}
 
 
+/*
+@enum
+json:"string"
+*/
 // An enum to test the @enum descriptor
-@enum Animal --json=string
-
+type Animal struct {
 	// Dog is a dog
-	Dog --string=doggy
-			--description="Your best friend, and you know it."
+	Dog int `string:"doggy"
+			description:"Your best friend, and you know it."`
 
 	// Cat is a cat
-	Cat --string=kitty --description="Your best friend, but doesn't always show it."
-			--default
+	Cat int `string:"kitty"
+			description:"Your best friend, but doesn't always show it."
+			default`
 
 	// Horse is a horse (of course)
-	Horse --string=horsie --description="Everyone loves horses."
+	Horse int `string:"horsie" description:"Everyone loves horses."`
+}
 
+
+/*
+@struct
+*/
 // A struct to test the @struct descriptor
 //
 // And another line or two for good measure
-@struct Tester
-	*AnimalEnum --default_expr="&Animal.Dog"
+type Tester struct {
+	*AnimalEnum
 
 	// The first item
 	Test1 string `json:"tester1"`
 
-	Test2 string --read --default_expr=`"foo"`
-	Test3 string `json:"tester3,omitempty"` --write
+	Test2 string `read`
+	Test3 string `write json:"tester3,omitempty"`
 
 	// The fourth item
-	Test4 string --read --write --default_expr=`"bar"`
-	Test5 string --read --write
-	*FooEnum "whatever"
-*/
+	Test4 string `read write`
+	Test5 string `read write`
+	*FooEnum
+}
 
+/*
+@struct
+*/
 type tester struct {
 	F FooEnum
 	O OofEnum

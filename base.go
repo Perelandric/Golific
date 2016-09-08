@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"go/ast"
 	"go/format"
 	"math/rand"
 	"os"
@@ -10,36 +11,39 @@ import (
 	"strings"
 	"text/template"
 	"unicode"
-	"unicode/utf8"
 )
 
 const _defaults = "-defaults"
 
 type Flag struct {
-	Name       string
-	Value      string
-	FoundEqual bool
+	Name            string
+	Value           string
+	FoundColon      bool
+	ValueWasBoolean bool
 }
 
-func (self *Flag) getWithEqualSign() (string, error) {
-	if !self.FoundEqual {
+func getFlags(lit *ast.BasicLit) string {
+	// Flags come from the struct field tag
+	tag, _ := strconv.Unquote(lit.Value)
+	return tag
+}
+
+func isExportedIdent(id string) bool {
+	return len(id) > 0 && 'A' <= id[0] && id[0] <= 'Z'
+}
+
+func (self *Flag) getWithColon() (string, error) {
+	if !self.FoundColon {
 		return self.Value,
-			fmt.Errorf("%q expects an '=' followed by a (possibly empty) value",
-				self.Name)
+			fmt.Errorf("%q expects a ':' followed by a value", self.Name)
 	}
 	return self.Value, nil
 }
 func (self *Flag) getNonEmpty() (string, error) {
-	if !self.FoundEqual || len(self.Value) == 0 {
+	if !self.FoundColon || len(self.Value) == 0 {
 		return self.Value, fmt.Errorf("%q requires a non-empty value", self.Name)
 	}
 	return self.Value, nil
-}
-func (self *Flag) getIdent() (string, error) {
-	if isIdent(self.Value) {
-		return self.Value, nil
-	}
-	return self.Value, fmt.Errorf("%q requires a valid identifier", self.Name)
 }
 
 func (self *Base) getUniqueId() string {
@@ -52,14 +56,28 @@ func (self *Base) getUniqueId() string {
 type Base struct {
 	flags  uint
 	unique string
+	Name   string
 	docs   []string
 }
 
+func (self *Base) setDocsAndName(docs []*ast.Comment, spec *ast.TypeSpec) error {
+	for _, d := range docs {
+		self.docs = append(self.docs, d.Text)
+	}
+
+	if self.Name = spec.Name.Name; !strings.HasPrefix(self.Name, "__") {
+		return fmt.Errorf("struct name must start with '__'")
+	}
+	return nil
+}
+
 func (self *Base) doBooleanFlag(flag Flag, toSet uint) error {
-	if !flag.FoundEqual || flag.Value == "true" {
+	if !flag.FoundColon || (flag.ValueWasBoolean && flag.Value == "true") {
 		self.flags |= toSet
-	} else if flag.Value == "false" {
+
+	} else if flag.ValueWasBoolean && flag.Value == "false" {
 		self.flags &^= toSet
+
 	} else {
 		return fmt.Errorf("Invalid value %q for %q", flag.Value, flag.Name)
 	}
@@ -78,255 +96,112 @@ type BaseRepr struct {
 }
 type BaseFieldRepr struct {
 	Base
+	Type string
 }
 
 // Gathers code comments. Comments are abandoned if a @prefix is found after.
-func (self *BaseFieldRepr) gatherCodeComments(cgText string) (string, bool) {
-	var commentLine string
-	temp := cgText
+func (self *BaseFieldRepr) gatherCodeCommentsAndName(
+	f *ast.Field, allow_embedded bool) error {
 
-	for strings.HasPrefix(temp, "//") {
-		temp, commentLine = getLine(temp[2:])
-		self.docs = append(self.docs, commentLine)
-
-		temp = strings.TrimSpace(temp)
+	// Comes from any comment lines before a field
+	for _, c := range f.Doc.List {
+		self.docs = append(self.docs, c.Text)
 	}
 
-	if getPrefix(temp) != "" {
-		// These comments are for the next descriptor, so abandon them
-		self.docs = nil
-		return cgText, true
+	if len(f.Names) == 0 && allow_embedded {
+		self.flags |= embedded
+
+	} else if len(f.Names) != 1 {
+		// TODO: Need to support multiple names for a single definition
+		return fmt.Errorf("Struct field must have exactly one name")
 	}
 
-	return temp, false
+	if self.flags&embedded == 0 {
+		self.Name = f.Names[0].Name
+	}
+
+	if ident, ok := f.Type.(*ast.Ident); ok {
+		self.Type = ident.Name
+	}
+	return nil
 }
 
-func getFlagWord(source string) (_, word string, err error) {
-	var n = 0
-
-	for _, r := range source {
-		if ('a' <= r && r <= 'z') || r == '_' {
-			n += utf8.RuneLen(r)
-		} else if r == '=' || unicode.IsSpace(r) {
-			break
-		} else {
-			return source, "", fmt.Errorf("Invalid flag: %q", source[:n])
-		}
-	}
-
-	if n == 0 {
-		return "", "", fmt.Errorf("Invalid flag: %q", "")
-	}
-
-	return source[n:], source[:n], nil
-}
-
-func getIdentOrType(source string) (_, ident_type string, err error) {
-	if source, ident_type, err = getIdent(source); err != nil {
-		if source, ident_type, err = getType(source); err != nil {
-			return source, "", fmt.Errorf("Value is neither a valid identifier nor type")
-		}
-	}
-	return source, ident_type, nil
-}
-
-func getIdent(source string) (_, ident string, err error) {
-	source = strings.TrimSpace(source)
-
-	var n = 0
-
-	for i, r := range source {
-		if isIdentRune(i, r) {
-			n += utf8.RuneLen(r)
-		} else if unicode.IsSpace(r) {
-			break
-		} else {
-			return source, "", fmt.Errorf("Invalid identifier: %q", source[:n])
-		}
-	}
-
-	if n == 0 {
-		return source, "", fmt.Errorf("Invalid identifier: %q", "")
-	}
-
-	return source[n:], source[:n], nil
-}
-
-func getType(source string) (_, typ string, err error) {
-	source = strings.TrimSpace(source)
-
-	if len(source) == 0 {
-		return "", "", fmt.Errorf("Invalid type: %q", "")
-	}
-
-	var n = 0
-	var a string
-
-	if source[0] == '*' {
-		n += 1
-		source = source[1:]
-		a = "*"
-	}
-
-	if source, typ, err = getIdent(source); err != nil {
-		return "", "", err
-	}
-	return source, a + typ, nil
-}
-
-func isIdent(word string) bool {
-	if len(word) == 0 {
-		return false
-	}
-	for i, r := range word {
-		if !isIdentRune(i, r) {
-			return false
-		}
-	}
-	return true
-}
-
-func isExportedIdent(word string) bool {
-	return isIdent(word) && ('A' <= word[0] && word[0] <= 'Z')
-}
-
-func isValidType(word string) bool {
-	if len(word) == 0 {
-		return false
-	}
-	if word[0] == '*' {
-		return isIdent(word[1:])
-	}
-	return isIdent(word)
-}
-
-func isIdentRune(i int, r rune) bool {
-	if unicode.IsLetter(r) == false && unicode.IsDigit(r) == false && r != '_' {
-		return false
-	}
-	if i == 0 && unicode.IsDigit(r) {
-		return false
-	}
-	return true
-}
-
-// Does a left trim, but also checks if a newline was found
-func trimLeftCheckNewline(s string) (string, bool) {
-	var n = 0
-	var found = false
-
-	for _, r := range s {
-		if unicode.IsSpace(r) {
-			n += utf8.RuneLen(r)
-
-			if r == '\n' || r == '\r' {
-				found = true
-			}
-		} else {
-			break
-		}
-	}
-	return s[n:], found
-}
-
-func getString(source string, doSingle bool) (
-	_, val string, foundStr, foundNewline bool, err error) {
-
-	temp, foundNewline := trimLeftCheckNewline(source)
-
-	if len(temp) > 0 &&
-		(temp[0] == '"' || temp[0] == '`' || (doSingle && temp[0] == '\'')) {
-
-		var idx = strings.IndexByte(temp[1:], temp[0])
-
-		if idx == -1 {
-			return temp, "", false, foundNewline, fmt.Errorf("Missing closing quote")
-		}
-		idx += 1 // Because we started searching on the second character
-
-		return temp[idx+1:], temp[1:idx], true, foundNewline, nil
-	}
-
-	return source, "", false, foundNewline, nil
-}
-
-func (self Base) genericGatherFlags(
-	cgText string, possibleEnd bool) (string, []Flag, bool, error) {
+func (self *Base) genericGatherFlags(cgText string) ([]Flag, error) {
 
 	var flags = make([]Flag, 0)
-	var foundNewline bool
 	var err error
 
-	cgText, foundNewline = trimLeftCheckNewline(cgText)
+	cgText = strings.TrimSpace(cgText)
 
-	for strings.HasPrefix(cgText, "--") {
-
-		cgText = cgText[2:] // strip away the "--"
-
+	for len(cgText) > 0 {
 		var f Flag
 
-		if cgText, f.Name, err = getFlagWord(cgText); err != nil {
-			return cgText, flags, foundNewline, err
+		// Get flag name
+		var n = 0
+
+		for _, r := range cgText {
+			if ('a' <= r && r <= 'z') || r == '_' {
+				n += 1
+			} else if r == ':' || unicode.IsSpace(r) {
+				break
+			} else {
+				return flags, fmt.Errorf("Invalid flag: %q", cgText[:n])
+			}
 		}
 
-		cgText, foundNewline = trimLeftCheckNewline(cgText)
+		if n == 0 {
+			return flags, fmt.Errorf("Expected flag name")
+		}
 
-		if strings.HasPrefix(cgText, "=") {
-			f.FoundEqual = true
+		cgText, f.Name = strings.TrimSpace(cgText[n:]), cgText[:n]
 
-			if foundNewline {
-				return cgText, flags, foundNewline, fmt.Errorf("Invalid line break before '='")
-			}
+		// Get possible colon and value
+		if strings.HasPrefix(cgText, ":") {
+			f.FoundColon = true
 
-			cgText = cgText[1:] // Strip away the `=`
-
-			cgText, foundNewline = trimLeftCheckNewline(cgText)
-			if foundNewline {
-				return cgText, flags, foundNewline, fmt.Errorf("Invalid line break after '='")
-			}
+			cgText = strings.TrimSpace(cgText[1:]) // Strip away the `:`
 
 			if len(cgText) == 0 {
-				return cgText, flags, false, fmt.Errorf("Expected value after '='")
+				return flags, fmt.Errorf("Expected value after ':'")
 			}
 
-			var foundStr bool
+			if strings.HasPrefix(cgText, "true") {
+				f.Value = "true"
+				f.ValueWasBoolean = true
 
-			// Don't need the foundNewline; we already trimmed it above
-			if cgText, f.Value, foundStr, _, err = getString(cgText, true); err != nil {
-				return cgText, flags, false, err
-			}
+			} else if strings.HasPrefix(cgText, "false") {
+				f.Value = "false"
+				f.ValueWasBoolean = true
 
-			if !foundStr {
-				// Get unquoted value
-				var idx = 0
-				for _, r := range cgText {
-					if unicode.IsSpace(r) {
-						break
-					}
-					idx += utf8.RuneLen(r)
+			} else if cgText[0] == '"' {
+				cgText = cgText[1:]
+				var idx = strings.IndexByte(cgText, '"')
+
+				if idx == -1 {
+					return flags, fmt.Errorf("Expected closing quote")
 				}
-				f.Value, cgText = cgText[0:idx], cgText[idx:]
-			}
 
-			cgText, foundNewline = trimLeftCheckNewline(cgText)
+				f.Value = cgText[0:idx]
+
+				cgText = strings.TrimSpace(cgText[idx+1:])
+
+			} else {
+				return flags, fmt.Errorf("Expected value after ':'")
+			}
 		}
 
 		flags = append(flags, f)
 	}
 
-	// There must be a line break after the last flag, unless it's the EOF
-	if !foundNewline && (!possibleEnd || len(strings.TrimSpace(cgText)) > 0) {
-		err = fmt.Errorf("Expected line break.")
-	}
-
-	return cgText, flags, foundNewline, err
+	return flags, err
 }
+
 func (self *FileData) generateCode() error {
 	if len(self.Enums) == 0 && len(self.Structs) == 0 && len(self.Unions) == 0 {
 		return nil
 	}
 
-	self.GatherUnionImports()
+	//	self.GatherUnionImports()
 	self.GatherEnumImports()
 	self.GatherStructImports()
 

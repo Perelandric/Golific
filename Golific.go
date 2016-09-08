@@ -23,12 +23,17 @@ func main() {
 		Imports: make(map[string]bool, 3),
 	}
 
-	for _, file := range os.Args[1:] {
-		fmt.Printf("Processing file: %q\n", file)
-		if err := data.DoFile(file); err != nil {
+	for _, filePath := range os.Args[1:] {
+		fmt.Printf("Processing file: %q\n", filePath)
+
+		if err := data.DoFile(filePath); err != nil {
 			fmt.Printf("File not generated; error: %s\n", err.Error())
 		}
 	}
+}
+
+type golificObj interface {
+	finish(*ast.Node, []string) error
 }
 
 type FileData struct {
@@ -40,30 +45,19 @@ type FileData struct {
 	Imports map[string]bool
 }
 
-func (self *FileData) DoFile(file string) error {
+func (self *FileData) DoFile(filePath string) error {
 	fset := token.NewFileSet()
 
-	f, err := parser.ParseFile(fset, file, nil, parser.ParseComments)
+	f, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
 	if err != nil {
 		return err
 	}
 
 	self.Package = f.Name.Name
-	if len(self.Package) == 0 {
-		return fmt.Errorf("No package Name")
-	}
 
-	var dir, filename = filepath.Split(file)
+	var dir, filename = filepath.Split(filePath)
 
 	self.File = filepath.Join(dir, "golific____"+filename)
-
-	for _, cg := range f.Comments {
-		for _, c := range cg.List {
-			if strings.HasPrefix(c.Text, "/*") { // Only do multi-line comments
-				self.doComment(c)
-			}
-		}
-	}
 
 	if err := self.generateCode(); err != nil {
 		return err
@@ -72,78 +66,67 @@ func (self *FileData) DoFile(file string) error {
 	return nil
 }
 
-func (self *FileData) doComment(c *ast.Comment) {
-	cgText := c.Text[2 : len(c.Text)-2]
+/*
+Returns the proper function to process an annotation, if found.
+*/
+func (self *FileData) Visit(node ast.Node) ast.Visitor {
+	if d, ok := node.(*ast.GenDecl); ok && len(d.Doc.List) > 0 && len(d.Specs) > 0 {
+		if spec, ok := d.Specs[0].(*ast.TypeSpec); ok {
+			self.tryDecl(d.Doc.List, spec)
+		}
+	}
+	return nil
+}
+
+func (self *FileData) tryDecl(cList []*ast.Comment, spec *ast.TypeSpec) {
+	var c = cList[0]
+	cgText := strings.TrimSpace(c.Text[2:])
+
+	if strings.HasPrefix(c.Text, "/*") {
+		cgText = strings.TrimSpace(cgText[0 : len(cgText)-2])
+	}
 
 	var err error
 	var name, prefix string
-	var docs []string
 
-	for {
-		cgText = strings.TrimSpace(cgText)
+	if prefix = getPrefix(cgText); prefix == "" {
+		return
+	}
 
-		if strings.HasPrefix(cgText, "//") {
-			var line string
-			cgText, line = getLine(cgText[2:])
-			docs = append(docs, line)
-			continue
+	cgText = strings.TrimSpace(cgText[len(prefix):]) // Strip away the prefix
+
+	log.SetPrefix(fmt.Sprintf("golific-%s: ", prefix))
+
+	switch prefix {
+	case "@enum":
+		err = self.newEnum(cgText, cList[1:], spec)
+
+	case "@struct":
+		err = self.newStruct(cgText, cList[1:], spec)
+		/*
+			case "@union":
+				return self.doUnion
+		*/
+
+	case "@enum-defaults":
+		err = self.doEnumDefaults(cgText)
+
+	case "@struct-defaults":
+		cgText, err = self.doStructDefaults(cgText)
+		/*
+			case "@union-defaults":
+				cgText, err = self.doUnionDefaults(cgText)
+		*/
+	default:
+		log.Fatalf("Unknown prefix %q\n", prefix)
+	}
+
+	if err != nil {
+		if len(name) > 0 {
+			log.Printf("%s: %s\n", name, err)
+		} else {
+			log.Println(err)
 		}
-
-		if prefix = getPrefix(cgText); prefix == "" {
-			break
-		}
-
-		cgText = cgText[len(prefix):] // Strip away the leading prefix
-
-		if len(cgText) == 0 {
-			log.Printf("Found %s with no definition.\n", prefix)
-			break
-		}
-
-		log.SetPrefix(fmt.Sprintf("golific-%s: ", prefix))
-
-		switch prefix {
-		case "@enum":
-			cgText, name, err = self.doEnum(cgText, docs)
-
-		case "@struct":
-			cgText, name, err = self.doStruct(cgText, docs)
-
-		case "@union":
-			cgText, name, err = self.doUnion(cgText, docs)
-
-		case "@enum-defaults":
-			cgText, err = self.doEnumDefaults(cgText)
-
-		case "@struct-defaults":
-			cgText, err = self.doStructDefaults(cgText)
-
-		case "@union-defaults":
-			cgText, err = self.doUnionDefaults(cgText)
-
-		default:
-			log.Fatalf("Unknown prefix %q\n", prefix)
-		}
-
-		if err != nil {
-			if len(name) > 0 {
-				log.Printf("%s: %s\n", name, err)
-			} else {
-				log.Println(err)
-			}
-
-			if idx := nextDescriptor(cgText); idx == -1 {
-				break
-
-			} else {
-				if between := cgText[0:idx]; len(strings.TrimSpace(between)) != 0 {
-					log.Printf("Skipping invalid data in comment: %q\n", between)
-				}
-				cgText = cgText[idx:] // Slice away everyting until the `@prefix`
-			}
-		}
-
-		docs = nil
 	}
 }
 

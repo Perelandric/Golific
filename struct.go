@@ -2,34 +2,29 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"go/ast"
 	"strconv"
 	"strings"
-	"unicode"
 )
 
 const (
 	read = 1 << iota
 	write
-	dropCtor
 	embedded
 )
 
 type StructDefaults struct {
 	BaseRepr
-	Constructor string
 }
 
 type StructRepr struct {
 	StructDefaults
-	Name   string
 	Fields []*StructFieldRepr
 }
 
 type StructFieldRepr struct {
 	BaseFieldRepr
 	Name        string // Field name
-	Type        string // Field data type
 	Tag         string // Typical struct field tags
 	Read        string // Method name for reads
 	Write       string // Method name for writes
@@ -43,7 +38,7 @@ func init() {
 }
 
 func (self *StructDefaults) gatherFlags(cgText string) (string, error) {
-	cgText, flags, _, err := self.genericGatherFlags(cgText, self == &structDefaults)
+	flags, err := self.genericGatherFlags(cgText)
 	if err != nil {
 		return cgText, err
 	}
@@ -53,21 +48,6 @@ func (self *StructDefaults) gatherFlags(cgText string) (string, error) {
 		case "drop_json": // Do not generate JSON marshaling methods
 			if err = self.doBooleanFlag(flag, dropJson); err != nil {
 				return cgText, err
-			}
-
-		case "drop_ctor": // Do not generate default constructor function
-			if err = self.doBooleanFlag(flag, dropCtor); err != nil {
-				return cgText, err
-			}
-
-		case "ctor_name": // Custom name for the default constructor
-			if self == (&structDefaults) { // Only if we're not setting defaults
-				if self.Constructor, err = flag.getIdent(); err != nil {
-					return cgText, err
-
-				} else {
-					continue
-				}
 			}
 
 			fallthrough // Not available as a default value
@@ -86,14 +66,6 @@ func (self *StructRepr) GetPrivateTypeName() string {
 func (self *StructRepr) GetJSONTypeName() string {
 	return "json_" + self.getUniqueId()
 }
-func (self *StructRepr) GetCtorName() string {
-	if len(self.Constructor) == 0 {
-		return "New" + strings.Title(self.Name)
-	}
-	return self.Constructor
-}
-
-func (self *StructRepr) DoCtor() bool { return self.flags&dropCtor == 0 }
 func (self *StructRepr) DoJson() bool { return self.flags&dropJson == 0 }
 
 func (self *StructFieldRepr) DoRead() bool  { return len(self.Read) > 0 }
@@ -157,187 +129,88 @@ func (self *FileData) doStructDefaults(cgText string) (string, error) {
 	return structDefaults.gatherFlags(cgText)
 }
 
-func (self *FileData) doStruct(cgText string, docs []string) (string, string, error) {
+func (self *FileData) newStruct(
+	cgText string, docs []*ast.Comment, spec *ast.TypeSpec) error {
+
+	strct, ok := spec.Type.(*ast.StructType)
+	if !ok || strct.Incomplete {
+		return fmt.Errorf("Expected 'struct' type for @enum")
+	}
+
 	var err error
 
-	strct := StructRepr{
+	strct_repr := StructRepr{
 		StructDefaults: structDefaults, // copy of current defaults
 	}
-	strct.StructDefaults.Base.docs = docs
 
-	if !unicode.IsSpace(rune(cgText[0])) {
-		return cgText, "",
-			fmt.Errorf("@struct is expected to be followed by a space and the name.")
+	if err = strct_repr.setDocsAndName(docs, spec); err != nil {
+		return err
 	}
 
-	cgText, foundNewline := trimLeftCheckNewline(cgText)
-	if foundNewline {
-		return cgText, "",
-			fmt.Errorf("The name must be on the same line as the @struct")
+	if cgText, err = strct_repr.gatherFlags(strings.TrimSpace(cgText)); err != nil {
+		return err
 	}
 
-	if cgText, strct.Name, err = getIdent(cgText); err != nil {
-		return cgText, strct.Name, err
+	if err = strct_repr.doFields(strct.Fields); err != nil {
+		return err
 	}
 
-	if cgText, err = strct.gatherFlags(cgText); err != nil {
-		return cgText, strct.Name, err
-	}
-
-	if cgText, err = strct.doFields(cgText); err != nil {
-		return cgText, strct.Name, err
-	}
-
-	self.Structs = append(self.Structs, &strct)
-
-	return cgText, strct.Name, strct.validate()
-}
-
-func (self *StructRepr) validate() error {
-
-	if self.flags&dropCtor == dropCtor && len(self.Constructor) > 0 {
-		log.Printf("WARNING: %q: found --drop_ctor and --ctor_name\n", self.Name)
-	}
+	self.Structs = append(self.Structs, &strct_repr)
 
 	return nil
 }
 
-func (self *StructRepr) doFields(cgText string) (_ string, err error) {
+func (self *StructRepr) doFields(fields *ast.FieldList) (err error) {
+	const name_conflit = "%s method name conflicts with property name %q"
 
-	for len(cgText) > 0 {
-		var foundPrefix bool
+	if len(fields.List) == 0 {
+		return fmt.Errorf("Structs must have at least one field defined")
+	}
+
+	for _, field := range fields.List {
 		var f = StructFieldRepr{}
 
-		if cgText, foundPrefix = f.gatherCodeComments(cgText); foundPrefix {
-			return cgText, nil
+		if err := f.gatherCodeCommentsAndName(field, true); err != nil {
+			return err
 		}
 
-		var leadingNewline, foundStr, isEmbedded, wasQuote bool
+		if f.flags&embedded == 0 {
+			// TODO: I need `gatherFlags` to alter the string and keep any unrecognized
+			// tags, since those will need to be added on to the resulting struct.
+			if err = f.gatherFlags(getFlags(field.Tag)); err != nil {
+				return err
+			}
 
-		if cgText, f.Name, err = getIdentOrType(cgText); err != nil {
-			return cgText, err
-		}
-
-		// Check if the field is embedded (next is `--`, newline or quote)
-		if cgText, isEmbedded, wasQuote = checkEmbedded(cgText); isEmbedded {
-			f.flags |= embedded
-			self.Fields = append(self.Fields, &f)
-
-			if wasQuote { // Was a quote, so gather the field tag
-				if cgText, f.Tag, _, _, err = getString(cgText, false); err != nil {
-					return cgText, err
+			if f.flags&(read|write) == (read | write) { // if `read` AND `write`
+				if f.Name == f.Read {
+					return fmt.Errorf(name_conflit, "read", f.Name)
 				}
-			}
-			// Now gather flags (if any)
-			if cgText, err = f.gatherEmbeddedFlags(cgText); err != nil {
-				return cgText, err
-			}
+				if f.Name == f.Write {
+					return fmt.Errorf(name_conflit, "write", f.Name)
+				}
 
-			continue
-		}
+				// if `read` OR `write` are set (but not both), set default name if needed
+			} else if f.flags&read == read || f.flags&write == write {
+				if f.flags&read == read && len(f.Read) == 0 {
+					f.Read = f.Name
+				}
 
-		// We know it's not an embedded type, so make sure it's a valid ident
-		// instead of a type. Using getIdent() just so we get the expected error.
-		if _, _, err = getIdent(f.Name); err != nil {
-			return cgText, err
-		}
-
-		if cgText, f.Type, err = getType(cgText); err != nil {
-			return cgText, err
-		}
-
-		// See if there's a tag.
-		cgText, f.Tag, foundStr, leadingNewline, err = getString(cgText, false)
-		if err != nil {
-			return cgText, err
-		}
-
-		if leadingNewline && foundStr { // The string was on the next line
-			return cgText, fmt.Errorf("Found string; expected flags or field name")
-		}
-
-		if cgText, err = f.gatherFlags(cgText); err != nil {
-			return cgText, err
-		}
-
-		if f.flags&(read|write) == (read | write) { // if `read` AND `write`
-			if f.Name == f.Read {
-				return cgText,
-					fmt.Errorf("read method name conflicts with property name %q", f.Name)
-			}
-			if f.Name == f.Write {
-				return cgText,
-					fmt.Errorf("write method name conflicts with property name %q", f.Name)
-			}
-
-			// if `read` or `write` are set (but not both), set default name if needed
-		} else if f.flags&read == read || f.flags&write == write {
-			if f.flags&read == read && len(f.Read) == 0 {
-				f.Read = f.Name
-			}
-			if f.flags&write == write && len(f.Write) == 0 {
-				f.Write = "Set" + strings.Title(f.Name)
+				if f.flags&write == write && len(f.Write) == 0 {
+					f.Write = "Set" + strings.Title(f.Name)
+				}
 			}
 		}
 
 		self.Fields = append(self.Fields, &f)
 	}
 
-	if len(self.Fields) == 0 {
-		return cgText, fmt.Errorf("Structs must have at least one field defined")
-	}
-
-	return cgText, nil
+	return nil
 }
 
-func checkEmbedded(cgText string) (_ string, isEmbed, wasQuote bool) {
-	temp, isEmbed := trimLeftCheckNewline(cgText)
-
-	if isFlag := strings.HasPrefix(temp, "--"); isFlag {
-		return temp, true, false
-	}
-
-	if isEmbed || len(temp) == 0 {
-		return cgText, true, false
-	}
-
-	if temp[0] == '`' || temp[0] == '"' {
-		return temp, true, true
-	}
-	return temp, false, false
-}
-
-func (self *StructFieldRepr) gatherEmbeddedFlags(
-	cgText string) (_ string, err error) {
-
-	cgText, flags, _, err := self.genericGatherFlags(cgText, true)
+func (self *StructFieldRepr) gatherFlags(cgText string) error {
+	flags, err := self.genericGatherFlags(cgText)
 	if err != nil {
-		return cgText, err
-	}
-
-	for _, flag := range flags {
-		switch strings.ToLower(flag.Name) {
-
-		case "default_expr": // Set default expression
-			if self.DefaultExpr, err = flag.getNonEmpty(); err != nil {
-				return cgText, err
-			}
-			// TODO: Should I parse the expression here? Use the formatter to verify?
-
-		default:
-			return cgText, fmt.Errorf("Unknown flag %q for embedded field", flag.Name)
-		}
-	}
-
-	return cgText, nil
-}
-
-func (self *StructFieldRepr) gatherFlags(cgText string) (string, error) {
-	const warnExported = "WARNING: The %s method %q is not exported.\n"
-
-	cgText, flags, _, err := self.genericGatherFlags(cgText, true)
-	if err != nil {
-		return cgText, err
+		return err
 	}
 
 	for _, flag := range flags {
@@ -345,38 +218,22 @@ func (self *StructFieldRepr) gatherFlags(cgText string) (string, error) {
 
 		case "read": // Set read access
 			self.flags |= read
-			if flag.FoundEqual {
-				if self.Read, err = flag.getIdent(); err != nil {
-					return cgText, err
-				}
-				if isExportedIdent(flag.Value) == false {
-					log.Printf(warnExported, flag.Name, flag.Value)
-				}
+			if flag.FoundColon {
+				self.Read = flag.Value
 			}
 
 		case "write": // Set write access
 			self.flags |= write
-			if flag.FoundEqual {
-				if self.Write, err = flag.getIdent(); err != nil {
-					return cgText, err
-				}
-				if isExportedIdent(flag.Value) == false {
-					log.Printf(warnExported, flag.Name, flag.Value)
-				}
+			if flag.FoundColon {
+				self.Write = flag.Value
 			}
-
-		case "default_expr": // Set default expression
-			if self.DefaultExpr, err = flag.getNonEmpty(); err != nil {
-				return cgText, err
-			}
-			// TODO: Should I parse the expression here? Use the formatter to verify?
 
 		default:
-			return cgText, fmt.Errorf("Unknown flag %q", flag.Name)
+			return fmt.Errorf("Unknown flag %q", flag.Name)
 		}
 	}
 
-	return cgText, nil
+	return nil
 }
 
 func (self *FileData) GatherStructImports() {
@@ -401,25 +258,6 @@ var struct_tmpl = `
 {{$struct.Name}} struct
 
 ******************************/
-
-{{- if $struct.DoCtor}}
-func {{$struct.GetCtorName}}() *{{$struct.Name}} {
-  return &{{$struct.Name}} {
-    private: {{$privateType}} {
-      {{range $f := $struct.Fields}}
-      {{- if and $f.IsPrivate $f.DoDefaultExpr -}}
-      {{printf "%s: %s," $f.Name $f.DefaultExpr}}
-      {{end -}}
-      {{end -}}
-    },
-    {{range $f := $struct.Fields}}
-    {{- if and (or $f.IsEmbedded $f.IsPublic) $f.DoDefaultExpr -}}
-    {{printf "%s: %s," $f.GetNameMaybeType $f.DefaultExpr}}
-    {{end -}}
-    {{end}}
-  }
-}
-{{end}}
 
 {{$struct.DoDocs -}}
 type {{$struct.Name}} struct {
@@ -500,15 +338,21 @@ func (self *{{$struct.Name}}) UnmarshalJSON(j []byte) error {
 	// For every property found, perform a separate UnmarshalJSON operation. This
 	// prevents overwrite of values in 'self' where properties are absent.
 	for key, rawMsg := range m {
-		switch key { // The anon structs in each case are needed for field tags
+		// The anon structs in each case are needed for field tags
+
+		switch key {
 		{{- range $f := $struct.Fields -}}
 		{{if $f.CouldBeJSON}}
 		case {{$f.PossibleJSONKeys}}:
 
-		var x = struct {
+		var x struct {
 			F {{$f.Type}}{{$f.GetSpaceAndTag}}
-		}{}
-		if err = json.Unmarshal(rawMsg, &x.F); err != nil {
+		}
+
+		var msgForStruct = append(append(append(append(
+			[]byte("{\""), key...), "\":"...), rawMsg...), '}')
+
+		if err = json.Unmarshal(msgForStruct, &x); err != nil {
 			return err
 		}
 
