@@ -7,15 +7,6 @@ import (
 	"strings"
 )
 
-/* @enum bitflags json="string" */
-/*
-type Animal struct {
-	Dog   `string:"doggie" description:"Your best friend, and you know it."`
-	Cat   `string:"kitty" description:"Your best friend, but doesn't always show it."`
-	Horse `string:"horsie" description:"Everyone loves horses."`
-}
-*/
-
 const (
 	bitflags = 1 << iota
 	summary
