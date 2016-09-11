@@ -208,7 +208,6 @@ The word *boolean* in the **Value** column means the allowed values are `true` o
 | `bitflags` | *boolean* | Causes the numeric values generated to able to be used as bitflags. When used, a maximum of 64 variants is allowed. |
 | `bitflag_separator` | Any non-empty string of text. | Only valid when `--bitflags` is used. Defines the separator used when the `.String()` method is called on values that have multiple bits set, as well as when `string` is used for JSON marshaling and/or unmarshaling. Default value is `,`. |
 | `iterator_name` | Any valid Go identifier | Alternate identifier name used for the array of variants generated. Used to resolve conflicts. The default name is `Values` |
-| `summary` | *boolean* | ***(This may be relocated, so is considered unstable at the moment.)*** Include a summary of this enum at the top of the generated file. |
 | `json` | Allowed values: `string` or `value` | Sets the type of marshaler and unmarshaler to use for JSON. The `string` option will use the `.String()` representation of the variant, whereas the `number` will use the numeric value. |
 | `json_marshal` | Allowed values: `string` or `value` | Same as the `--json` flag but only sets the marshaler. |
 | `json_unmarshal` | Allowed values: `string` or `value` | Same as the `--json` flag but only sets the unmarshaler. |

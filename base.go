@@ -20,12 +20,16 @@ type Flag struct {
 	Value           string
 	FoundColon      bool
 	ValueWasBoolean bool
+	unknown         bool // marks if the flag was unknown to Golific
 }
 
 func getFlags(lit *ast.BasicLit) string {
 	// Flags come from the struct field tag
-	tag, _ := strconv.Unquote(lit.Value)
-	return tag
+	if lit != nil {
+		tag, _ := strconv.Unquote(lit.Value)
+		return tag
+	}
+	return ""
 }
 
 func isExportedIdent(id string) bool {
@@ -66,8 +70,9 @@ func (self *Base) setDocsAndName(docs []*ast.Comment, spec *ast.TypeSpec) error 
 	}
 
 	if self.Name = spec.Name.Name; !strings.HasPrefix(self.Name, "__") {
-		return fmt.Errorf("struct name must start with '__'")
+		return fmt.Errorf("struct %q must start with '__'", self.Name)
 	}
+	self.Name = self.Name[2:] // slice away the '__'
 	return nil
 }
 
@@ -86,7 +91,7 @@ func (self *Base) doBooleanFlag(flag Flag, toSet uint) error {
 
 func (self *Base) DoDocs() string {
 	if len(self.docs) > 0 {
-		return "// " + strings.Join(self.docs, "\n// ") + "\n"
+		return strings.Join(self.docs, "\n") + "\n"
 	}
 	return ""
 }
@@ -104,8 +109,10 @@ func (self *BaseFieldRepr) gatherCodeCommentsAndName(
 	f *ast.Field, allow_embedded bool) error {
 
 	// Comes from any comment lines before a field
-	for _, c := range f.Doc.List {
-		self.docs = append(self.docs, c.Text)
+	if f.Doc != nil {
+		for _, c := range f.Doc.List {
+			self.docs = append(self.docs, c.Text)
+		}
 	}
 
 	if len(f.Names) == 0 && allow_embedded {
@@ -116,17 +123,22 @@ func (self *BaseFieldRepr) gatherCodeCommentsAndName(
 		return fmt.Errorf("Struct field must have exactly one name")
 	}
 
-	if self.flags&embedded == 0 {
+	if len(f.Names) >= 1 {
 		self.Name = f.Names[0].Name
 	}
 
 	if ident, ok := f.Type.(*ast.Ident); ok {
 		self.Type = ident.Name
+
+	} else if star, ok := f.Type.(*ast.StarExpr); ok {
+		if ident, ok := star.X.(*ast.Ident); ok {
+			self.Type = "*" + ident.Name
+		}
 	}
 	return nil
 }
 
-func (self *Base) genericGatherFlags(cgText string) ([]Flag, error) {
+func genericGatherFlags(cgText string) ([]Flag, error) {
 
 	var flags = make([]Flag, 0)
 	var err error
@@ -139,13 +151,15 @@ func (self *Base) genericGatherFlags(cgText string) ([]Flag, error) {
 		// Get flag name
 		var n = 0
 
-		for _, r := range cgText {
+		for n < len(cgText) {
+			var r = cgText[n]
+
 			if ('a' <= r && r <= 'z') || r == '_' {
 				n += 1
-			} else if r == ':' || unicode.IsSpace(r) {
+			} else if r == ':' || unicode.IsSpace(rune(r)) {
 				break
 			} else {
-				return flags, fmt.Errorf("Invalid flag: %q", cgText[:n])
+				return flags, fmt.Errorf("Invalid flag: %q", cgText[:n+1])
 			}
 		}
 
@@ -162,7 +176,7 @@ func (self *Base) genericGatherFlags(cgText string) ([]Flag, error) {
 			cgText = strings.TrimSpace(cgText[1:]) // Strip away the `:`
 
 			if len(cgText) == 0 {
-				return flags, fmt.Errorf("Expected value after ':'")
+				return flags, fmt.Errorf("Expected value after '%s:'", f.Name)
 			}
 
 			if strings.HasPrefix(cgText, "true") {
@@ -186,7 +200,7 @@ func (self *Base) genericGatherFlags(cgText string) ([]Flag, error) {
 				cgText = strings.TrimSpace(cgText[idx+1:])
 
 			} else {
-				return flags, fmt.Errorf("Expected value after ':'")
+				return flags, fmt.Errorf("Expected value after '%s:'", f.Name)
 			}
 		}
 
@@ -246,26 +260,24 @@ import (
   {{end -}}
 )
 
-{{- if .DoStructSummary}}
+
 /******************************************************************************
   STRUCT SUMMARY
 
 ******************************************************************************/
-{{end -}}
 
-{{- if .DoEnumSummary}}
+
+
 /******************************************************************************
 	ENUM SUMMARY
 {{range $enum := .Enums}}
-{{- if $enum.DoSummary}}
 {{$enum.Name}} (type {{printf "%sEnum" $enum.Name}}, {{$enum.GetIntType}})
 {{- range $f := $enum.Fields}}
 	{{ printf "%s %d %q %q" $f.Name $f.Value $f.String $f.Description -}}
 {{end}}
 {{end -}}
-{{end -}}
 ******************************************************************************/
-{{end -}}
+
 
 {{- template "generate_union" .Unions}}
 

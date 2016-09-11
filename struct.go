@@ -24,7 +24,6 @@ type StructRepr struct {
 
 type StructFieldRepr struct {
 	BaseFieldRepr
-	Name        string // Field name
 	Tag         string // Typical struct field tags
 	Read        string // Method name for reads
 	Write       string // Method name for writes
@@ -38,12 +37,14 @@ func init() {
 }
 
 func (self *StructDefaults) gatherFlags(cgText string) (string, error) {
-	flags, err := self.genericGatherFlags(cgText)
+	flags, err := genericGatherFlags(cgText)
 	if err != nil {
 		return cgText, err
 	}
 
-	for _, flag := range flags {
+	for i := range flags {
+		var flag = flags[i]
+
 		switch strings.ToLower(flag.Name) {
 		case "drop_json": // Do not generate JSON marshaling methods
 			if err = self.doBooleanFlag(flag, dropJson); err != nil {
@@ -53,7 +54,7 @@ func (self *StructDefaults) gatherFlags(cgText string) (string, error) {
 			fallthrough // Not available as a default value
 
 		default:
-			return cgText, fmt.Errorf("Unknown flag %q", flag.Name)
+			flags[i].unknown = true
 		}
 	}
 
@@ -119,10 +120,13 @@ func (self *StructFieldRepr) getJSONFieldTagName() string {
 	return ""
 }
 
-// embedded fields use the `.Name` to store the embedded type. Since the type
-// also serves as a name, the leading '*' may need to be stripped away.
+// Gets the Name, which may be the Type for embedded fields. If so, it strips
+// away any leading `*`
 func (self *StructFieldRepr) GetNameMaybeType() string {
-	return strings.TrimLeft(self.Name, "*")
+	if self.IsEmbedded() {
+		return strings.TrimLeft(self.Type, "*")
+	}
+	return self.Name
 }
 
 func (self *FileData) doStructDefaults(cgText string) (string, error) {
@@ -161,7 +165,7 @@ func (self *FileData) newStruct(
 }
 
 func (self *StructRepr) doFields(fields *ast.FieldList) (err error) {
-	const name_conflit = "%s method name conflicts with property name %q"
+	const name_conflit = "%q method name conflicts with property name %q"
 
 	if len(fields.List) == 0 {
 		return fmt.Errorf("Structs must have at least one field defined")
@@ -208,12 +212,14 @@ func (self *StructRepr) doFields(fields *ast.FieldList) (err error) {
 }
 
 func (self *StructFieldRepr) gatherFlags(cgText string) error {
-	flags, err := self.genericGatherFlags(cgText)
+	flags, err := genericGatherFlags(cgText)
 	if err != nil {
 		return err
 	}
 
-	for _, flag := range flags {
+	for i := range flags {
+		var flag = flags[i]
+
 		switch strings.ToLower(flag.Name) {
 
 		case "read": // Set read access
@@ -229,7 +235,7 @@ func (self *StructFieldRepr) gatherFlags(cgText string) error {
 			}
 
 		default:
-			return fmt.Errorf("Unknown flag %q", flag.Name)
+			flags[i].unknown = true
 		}
 	}
 
@@ -241,10 +247,6 @@ func (self *FileData) GatherStructImports() {
 		return
 	}
 	self.Imports["encoding/json"] = true
-}
-
-func (self *FileData) DoStructSummary() bool {
-	return false
 }
 
 var struct_tmpl = `
@@ -264,7 +266,7 @@ type {{$struct.Name}} struct {
   private {{$privateType}}
   {{- range $f := $struct.Fields}}
 	{{- if $f.IsEmbedded}}
-	{{printf "%s%s%s" $f.DoDocs $f.Name $f.GetSpaceAndTag}}
+	{{printf "%s%s%s" $f.DoDocs $f.Type $f.GetSpaceAndTag}}
   {{- else if $f.IsPublic}}
   {{printf "%s%s %s%s" $f.DoDocs $f.Name $f.Type $f.GetSpaceAndTag}}
   {{- end -}}
@@ -283,7 +285,7 @@ type {{$jsonType}} struct {
   *{{- $privateType}}
   {{- range $f := $struct.Fields}}
 	{{- if $f.IsEmbedded}}
-	{{printf "%s%s" $f.Name $f.GetSpaceAndTag}}
+	{{printf "%s%s" $f.Type $f.GetSpaceAndTag}}
   {{- else if $f.IsPublic}}
   {{printf "%s %s%s" $f.Name $f.Type $f.GetSpaceAndTag}}
   {{- end -}}

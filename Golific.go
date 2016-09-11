@@ -59,6 +59,8 @@ func (self *FileData) DoFile(filePath string) error {
 
 	self.File = filepath.Join(dir, "golific____"+filename)
 
+	ast.Walk(self, f)
+
 	if err := self.generateCode(); err != nil {
 		return err
 	}
@@ -70,12 +72,21 @@ func (self *FileData) DoFile(filePath string) error {
 Returns the proper function to process an annotation, if found.
 */
 func (self *FileData) Visit(node ast.Node) ast.Visitor {
-	if d, ok := node.(*ast.GenDecl); ok && len(d.Doc.List) > 0 && len(d.Specs) > 0 {
-		if spec, ok := d.Specs[0].(*ast.TypeSpec); ok {
-			self.tryDecl(d.Doc.List, spec)
-		}
+	if node == nil {
+		return self
 	}
-	return nil
+
+	d, ok := node.(*ast.GenDecl)
+
+	if !ok || d.Doc == nil || len(d.Doc.List) == 0 || len(d.Specs) == 0 {
+		return self
+	}
+
+	if spec, ok := d.Specs[0].(*ast.TypeSpec); ok {
+		self.tryDecl(d.Doc.List, spec)
+	}
+
+	return self
 }
 
 func (self *FileData) tryDecl(cList []*ast.Comment, spec *ast.TypeSpec) {

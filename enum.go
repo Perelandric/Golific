@@ -9,7 +9,6 @@ import (
 
 const (
 	bitflags = 1 << iota
-	summary
 	jsonMarshalIsString
 	jsonUnmarshalIsString
 	xmlMarshalIsString
@@ -33,7 +32,6 @@ type EnumRepr struct {
 
 type EnumFieldRepr struct {
 	BaseFieldRepr
-	Name        string
 	String      string
 	Description string
 	Value       int64
@@ -48,13 +46,15 @@ func init() {
 }
 
 func (self *EnumDefaults) gatherFlags(cgText string) error {
-	flags, err := self.genericGatherFlags(cgText)
+	flags, err := genericGatherFlags(cgText)
 	if err != nil {
 		return err
 	}
 
-	for _, flag := range flags {
-		switch strings.ToLower(flag.Name) {
+	for i := range flags {
+		var flag = flags[i]
+
+		switch flag.Name {
 
 		case "bitflags": // The enum values are to be bitflags
 			if err = self.doBooleanFlag(flag, bitflags); err != nil {
@@ -69,23 +69,11 @@ func (self *EnumDefaults) gatherFlags(cgText string) error {
 		case "iterator_name": // Custom Name for Array of values
 			self.iterName = flag.Value
 
-		case "summary": // Include a summary of this enum at the top of the file
-			if err = self.doBooleanFlag(flag, summary); err != nil {
-				return err
-			}
-
 		case "json": // Set type of JSON marshaler and unmarshaler
 			err = self.setMarshal(flag, jsonMarshalIsString|jsonUnmarshalIsString)
 			if err != nil {
 				return err
 			}
-			/*
-				case "xml": // Set type of XML marshaler and unmarshaler
-					err = self.setMarshal(flag, xmlMarshalIsString|xmlUnmarshalIsString)
-					if err != nil {
-						return err
-					}
-			*/
 		case "json_marshal": // Set type of JSON marshaler
 			if err = self.setMarshal(flag, jsonMarshalIsString); err != nil {
 				return err
@@ -95,29 +83,12 @@ func (self *EnumDefaults) gatherFlags(cgText string) error {
 			if err = self.setMarshal(flag, jsonUnmarshalIsString); err != nil {
 				return err
 			}
-			/*
-				case "xml_marshal": // Set type of XML marshaler
-					if err = self.setMarshal(flag, xmlMarshalIsString); err != nil {
-						return err
-					}
-
-				case "xml_unmarshal": // Set type of XML unmarshaler
-					if err = self.setMarshal(flag, xmlUnmarshalIsString); err != nil {
-						return err
-					}
-			*/
 		case "drop_json": // Do not generate JSON marshaling methods
 			if err = self.doBooleanFlag(flag, dropJson); err != nil {
 				return err
 			}
-			/*
-				case "drop_xml": // Do not generate XML marshaling methods
-					if err = self.doBooleanFlag(flag, dropXml); err != nil {
-						return err
-					}
-			*/
 		default:
-			return fmt.Errorf("Unknown flag %q", flag.Name)
+			flags[i].unknown = true
 		}
 	}
 
@@ -128,7 +99,6 @@ func (self *EnumRepr) GetUniqueName() string {
 	return "value_" + self.getUniqueId()
 }
 
-func (self *EnumRepr) DoSummary() bool { return self.flags&summary == summary }
 func (self *EnumRepr) DoJson() bool    { return self.flags&dropJson == 0 }
 func (self *EnumRepr) DoXml() bool     { return self.flags&dropXml == 0 }
 func (self *EnumRepr) IsBitflag() bool { return self.flags&bitflags == bitflags }
@@ -216,7 +186,7 @@ func (self *EnumRepr) doFields(fields *ast.FieldList) (err error) {
 	for _, field := range fields.List {
 		var f = EnumFieldRepr{}
 
-		if err := f.gatherCodeCommentsAndName(field, false); err != nil {
+		if err = f.gatherCodeCommentsAndName(field, false); err != nil {
 			return err
 		}
 
@@ -267,12 +237,14 @@ func (self *EnumFieldRepr) gatherFlags(tag string) error {
 
 	const errCustomDefault = "A --value can not be assigned on a --default variant"
 
-	flags, err := self.genericGatherFlags(tag)
+	flags, err := genericGatherFlags(tag)
 	if err != nil {
 		return err
 	}
 
-	for _, flag := range flags {
+	for i := range flags {
+		var flag = flags[i]
+
 		switch strings.ToLower(flag.Name) {
 
 		case "default": // The default value used when [un]marshaling
@@ -316,7 +288,7 @@ func (self *EnumFieldRepr) gatherFlags(tag string) error {
 			}
 
 		default:
-			return fmt.Errorf("Unknown flag %q", flag.Name)
+			flags[i].unknown = true
 		}
 	}
 
@@ -360,16 +332,6 @@ func (self *FileData) GatherEnumImports() {
 			break
 		}
 	}
-}
-
-// If any EnumRepr is `bitflag`, `strings` is needed
-func (self *FileData) DoEnumSummary() bool {
-	for _, repr := range self.Enums {
-		if repr.flags&summary == summary {
-			return true
-		}
-	}
-	return false
 }
 
 var enum_tmpl = `

@@ -52,16 +52,18 @@ func init() {
 /*
 
 func (self *UnionDefaults) gatherFlags(cgText string) (string, error) {
-	flags, _, err := self.genericGatherFlags(cgText, self == &unionDefaults)
+	flags, err := genericGatherFlags(cgText, self == &unionDefaults)
 	if err != nil {
 		return cgText, err
 	}
 
-	for _, flag := range flags {
+	for i := range flags {
+		var flag = flags[i]
+
 		switch strings.ToLower(flag.Name) {
 
 		default:
-			return cgText, fmt.Errorf("Unknown flag %q", flag.Name)
+			flags[i].unknown = true
 		}
 	}
 
@@ -147,16 +149,18 @@ func (self *UnionRepr) doFields(cgText string) (_ string, err error) {
 func (self *UnionFieldRepr) gatherFlags(cgText string) (string, error) {
 	const warnExported = "WARNING: The %s method %q is not exported.\n"
 
-	flags, _, err := self.genericGatherFlags(cgText, true)
+	flags, err := genericGatherFlags(cgText, true)
 	if err != nil {
 		return cgText, err
 	}
 
-	for _, flag := range flags {
+	for i := range flags {
+		var flag = flags[i]
+
 		switch strings.ToLower(flag.Name) {
 
 		default:
-			return cgText, fmt.Errorf("Unknown flag %q", flag.Name)
+			flags[i].unknown = true
 		}
 	}
 
@@ -168,10 +172,6 @@ func (self *FileData) GatherUnionImports() {
 		return
 	}
 	self.Imports["encoding/json"] = true
-}
-
-func (self *FileData) DoUnionSummary() bool {
-	return false
 }
 */
 var union_tmpl = `

@@ -30,24 +30,20 @@ type AnotherUnion struct {
 
 /*
 @enum
-bitflags bitflag_separator:"," iterator_name="foobar" json:"string"
+bitflags bitflag_separator:"," iterator_name:"foobar" json:"string"
 */
-type Foo struct {
-	Bar int `string:bar`
-	Baz int `string:baz description:"This is the description"`
+type __Foo struct {
+	Bar int `string:"bar"`
+	Baz int `string:"baz" description:"This is the description"`
 	Buz int
 }
 
 /*
-@enum-defaults summary
-*/
-
-/*
 @enum
 */
-type Oof struct {
+type __Oof struct {
 	Bar int `string:"bar"`
-	Baz int `value:123`
+	Baz int `value:"123"`
 	Buz int `description:"Some description"`
 }
 
@@ -56,7 +52,7 @@ type Oof struct {
 json:"string"
 */
 // An enum to test the @enum descriptor
-type Animal struct {
+type __Animal struct {
 	// Dog is a dog
 	Dog int `string:"doggy"
 			description:"Your best friend, and you know it."`
@@ -76,7 +72,7 @@ type Animal struct {
 // A struct to test the @struct descriptor
 //
 // And another line or two for good measure
-type Tester struct {
+type __Tester struct {
 	*AnimalEnum
 
 	// The first item
@@ -87,13 +83,16 @@ type Tester struct {
 
 	// The fourth item
 	Test4 string `read write`
-	Test5 string `read write`
+	Test5 string `read write` /*`
+	gRead
+	gWrite
+	gString:"the string"
+	gDescription:"This is the description"`
+	*/
+
 	*FooEnum
 }
 
-/*
-@struct
-*/
 type tester struct {
 	F FooEnum
 	O OofEnum
