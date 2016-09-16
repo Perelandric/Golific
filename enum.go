@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/ast"
 	"strconv"
-	"strings"
 )
 
 const (
@@ -43,56 +42,6 @@ func init() {
 	enumDefaults.FlagSep = ""
 	enumDefaults.iterName = "Values"
 	enumDefaults.flags = 0
-}
-
-func (self *EnumDefaults) gatherFlags(cgText string) error {
-	flags, err := genericGatherFlags(cgText)
-	if err != nil {
-		return err
-	}
-
-	for i := range flags {
-		var flag = flags[i]
-
-		switch flag.Name {
-
-		case "bitflags": // The enum values are to be bitflags
-			if err = self.doBooleanFlag(flag, bitflags); err != nil {
-				return err
-			}
-
-		case "bitflag_separator": // The separator used when joining bitflags
-			if self.FlagSep, err = flag.getNonEmpty(); err != nil {
-				return err
-			}
-
-		case "iterator_name": // Custom Name for Array of values
-			self.iterName = flag.Value
-
-		case "json": // Set type of JSON marshaler and unmarshaler
-			err = self.setMarshal(flag, jsonMarshalIsString|jsonUnmarshalIsString)
-			if err != nil {
-				return err
-			}
-		case "json_marshal": // Set type of JSON marshaler
-			if err = self.setMarshal(flag, jsonMarshalIsString); err != nil {
-				return err
-			}
-
-		case "json_unmarshal": // Set type of JSON unmarshaler
-			if err = self.setMarshal(flag, jsonUnmarshalIsString); err != nil {
-				return err
-			}
-		case "drop_json": // Do not generate JSON marshaling methods
-			if err = self.doBooleanFlag(flag, dropJson); err != nil {
-				return err
-			}
-		default:
-			flags[i].unknown = true
-		}
-	}
-
-	return nil
 }
 
 func (self *EnumRepr) GetUniqueName() string {
@@ -135,17 +84,45 @@ func (repr *EnumRepr) GetIntType() string {
 	return "uint64"
 }
 
-func (self *FileData) doEnumDefaults(cgText string) error {
-	return enumDefaults.gatherFlags(cgText)
+func (self *FileData) doEnumDefaults(tagText string) error {
+	return enumDefaults.gatherFlags(tagText)
 }
 
-func (self *FileData) newEnum(
-	cgText string, docs []*ast.Comment, spec *ast.TypeSpec) error {
+func (ed *EnumDefaults) gatherFlags(tagText string) error {
+	return ed.genericGatherFlags(tagText, func(flag Flag) (err error) {
+		switch flag.Name {
 
-	strct, ok := spec.Type.(*ast.StructType)
-	if !ok || strct.Incomplete {
-		return fmt.Errorf("Expected 'struct' type for @enum")
-	}
+		case "bitflags": // The enum values are to be bitflags
+			return ed.doBooleanFlag(flag, bitflags)
+
+		case "bitflag_separator": // The separator used when joining bitflags
+			if ed.FlagSep, err = flag.getNonEmpty(); err != nil {
+				return err
+			}
+		case "iterator_name": // Custom Name for Array of values
+			ed.iterName = flag.Value
+
+		case "json": // Set type of JSON marshaler and unmarshaler
+			return ed.setMarshal(flag, jsonMarshalIsString|jsonUnmarshalIsString)
+
+		case "json_marshal": // Set type of JSON marshaler
+			return ed.setMarshal(flag, jsonMarshalIsString)
+
+		case "json_unmarshal": // Set type of JSON unmarshaler
+			return ed.setMarshal(flag, jsonUnmarshalIsString)
+
+		case "drop_json": // Do not generate JSON marshaling methods
+			return ed.doBooleanFlag(flag, dropJson)
+
+		default:
+			return UnknownFlag
+		}
+		return nil
+	})
+}
+
+func (self *FileData) newEnum(tagText string, docs []*ast.Comment,
+	spec *ast.TypeSpec, strct *ast.StructType) error {
 
 	var err error
 
@@ -157,7 +134,7 @@ func (self *FileData) newEnum(
 		return err
 	}
 
-	if err = enum.gatherFlags(strings.TrimSpace(cgText)); err != nil {
+	if err = enum.gatherFlags(tagText); err != nil {
 		return err
 	}
 
@@ -233,21 +210,13 @@ func (self *EnumRepr) doFields(fields *ast.FieldList) (err error) {
 	return nil
 }
 
-func (self *EnumFieldRepr) gatherFlags(tag string) error {
+func (self *EnumFieldRepr) gatherFlags(tagText string) error {
 
-	const errCustomDefault = "A --value can not be assigned on a --default variant"
+	const errCustomDefault = "A 'value' can not be assigned on a 'default' variant"
 
-	flags, err := genericGatherFlags(tag)
-	if err != nil {
-		return err
-	}
-
-	for i := range flags {
-		var flag = flags[i]
-
-		switch strings.ToLower(flag.Name) {
-
-		case "default": // The default value used when [un]marshaling
+	return self.genericGatherFlags(tagText, func(flag Flag) (err error) {
+		switch flag.Name {
+		case "gDefault": // The default value used when [un]marshaling
 			if err = self.doBooleanFlag(flag, hasDefault); err != nil {
 				return err
 			}
@@ -255,17 +224,17 @@ func (self *EnumFieldRepr) gatherFlags(tag string) error {
 				return fmt.Errorf(errCustomDefault)
 			}
 
-		case "string": // The string representation of the field
+		case "gString": // The string representation of the field
 			if self.String, err = flag.getWithColon(); err != nil {
 				return err
 			}
 
-		case "description": // The description of the field
+		case "gDescription": // The description of the field
 			if self.Description, err = flag.getWithColon(); err != nil {
 				return err
 			}
 
-		case "value": // Custom value for the field
+		case "gValue": // Custom value for the field
 			if _, err = flag.getWithColon(); err != nil {
 				return err
 			}
@@ -281,25 +250,23 @@ func (self *EnumFieldRepr) gatherFlags(tag string) error {
 				}
 
 				if self.Value == 0 {
-					return fmt.Errorf("The 0 value is reserved for the --default flag.")
+					return fmt.Errorf("The 0 value is reserved for the gDefault flag.")
 				}
 
 				self.flags |= hasCustomValue
 			}
-
 		default:
-			flags[i].unknown = true
+			return UnknownFlag
 		}
-	}
-
-	return nil
+		return nil
+	})
 }
 
 func (self *EnumDefaults) setMarshal(flag Flag, flags uint) error {
 	if _, err := flag.getNonEmpty(); err != nil {
 		return err
 	}
-	switch strings.ToLower(flag.Value) {
+	switch flag.Value {
 	case "string":
 		self.flags |= flags
 	case "value":
@@ -315,6 +282,7 @@ func (self *FileData) GatherEnumImports() {
 		return
 	}
 	self.Imports["strconv"] = true
+	self.Imports["Golific/gJson"] = true
 
 	// If any EnumRepr is includes a JSON unmarshaler, "log" is needed
 	for _, repr := range self.Enums {
@@ -406,6 +374,12 @@ func (self {{$variantType}}) IsDefault() bool {
 	return {{printf "%t" $enum.HasDefault}} && self.{{$uniqField}} == 0
 }
 
+// IsZero returns true of the variant was designated as the default value. It is
+// the same as IsDefault(), but implements the Zeroable interface.
+func (self {{$variantType}}) IsZero() bool {
+	return {{printf "%t" $enum.HasDefault}} && self.{{$uniqField}} == 0
+}
+
 // String returns the given string value of the variant. If none has been set,
 // its return value is as though 'Name()' had been called.
 {{if .IsBitflag -}}
@@ -450,17 +424,24 @@ func (self {{$variantType}}) Description() string {
   return ""
 }
 
+// JSONEncode implements part of Golific's JSONEncodable interface.
+func (self {{$variantType}}) JSONEncode(encoder *gJson.Encoder) {
+	{{if $enum.JsonMarshalIsString -}}
+	encoder.EncodeString(self.String())
+	{{- else -}}
+	encoder.EncodeInt(int64(self.{{$uniqField}}))
+	{{- end}}
+}
+
 {{if $enum.DoJson -}}
 // JSON marshaling methods
-{{if $enum.JsonMarshalIsString -}}
 func (self {{$variantType}}) MarshalJSON() ([]byte, error) {
-  return []byte(strconv.Quote(self.String())), nil
+	{{if $enum.JsonMarshalIsString -}}
+	return []byte(strconv.Quote(self.String())), nil
+	{{- else -}}
+	return []byte(strconv.Itoa(int(self.{{$uniqField}}))), nil
+	{{- end}}
 }
-{{- else -}}
-func (self {{$variantType}}) MarshalJSON() ([]byte, error) {
-  return []byte(strconv.Itoa(int(self.{{$uniqField}}))), nil
-}
-{{- end}}
 
 {{if $enum.JsonUnmarshalIsString -}}
 func (self *{{$variantType}}) UnmarshalJSON(b []byte) error {
@@ -516,9 +497,6 @@ func (self *{{$variantType}}) UnmarshalJSON(b []byte) error {
 {{- end}}
 {{- end}}
 
-{{if $enum.DoXml -}}
-
-{{- end}}
 
 {{- if .IsBitflag}}
 // Bitflag enum methods

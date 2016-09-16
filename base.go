@@ -23,6 +23,8 @@ type Flag struct {
 	unknown         bool // marks if the flag was unknown to Golific
 }
 
+var UnknownFlag = fmt.Errorf("Unknown flag")
+
 func getFlags(lit *ast.BasicLit) string {
 	// Flags come from the struct field tag
 	if lit != nil {
@@ -59,6 +61,7 @@ func (self *Base) getUniqueId() string {
 
 type Base struct {
 	flags  uint
+	Tag    string // for processing flags, and for struct field tags
 	unique string
 	Name   string
 	docs   []string
@@ -138,76 +141,87 @@ func (self *BaseFieldRepr) gatherCodeCommentsAndName(
 	return nil
 }
 
-func genericGatherFlags(cgText string) ([]Flag, error) {
+func (b *Base) genericGatherFlags(tagText string, fn func(Flag) error) (err error) {
+	tagText = strings.TrimSpace(tagText)
+	b.Tag = ""
 
-	var flags = make([]Flag, 0)
-	var err error
-
-	cgText = strings.TrimSpace(cgText)
-
-	for len(cgText) > 0 {
+	for len(tagText) > 0 {
 		var f Flag
 
 		// Get flag name
 		var n = 0
 
-		for n < len(cgText) {
-			var r = cgText[n]
+		for n < len(tagText) {
+			var r = tagText[n]
 
-			if ('a' <= r && r <= 'z') || r == '_' {
+			if ('a' <= (r|0x20) && (r|0x20) <= 'z') || r == '_' {
 				n += 1
 			} else if r == ':' || unicode.IsSpace(rune(r)) {
 				break
 			} else {
-				return flags, fmt.Errorf("Invalid flag: %q", cgText[:n+1])
+				return fmt.Errorf("Invalid flag: %q", tagText[:n+1])
 			}
 		}
 
 		if n == 0 {
-			return flags, fmt.Errorf("Expected flag name")
+			return fmt.Errorf("Expected flag name")
 		}
 
-		cgText, f.Name = strings.TrimSpace(cgText[n:]), cgText[:n]
+		tagText, f.Name = strings.TrimSpace(tagText[n:]), tagText[:n]
 
 		// Get possible colon and value
-		if strings.HasPrefix(cgText, ":") {
+		if strings.HasPrefix(tagText, ":") {
 			f.FoundColon = true
 
-			cgText = strings.TrimSpace(cgText[1:]) // Strip away the `:`
+			tagText = strings.TrimSpace(tagText[1:]) // Strip away the `:`
 
-			if len(cgText) == 0 {
-				return flags, fmt.Errorf("Expected value after '%s:'", f.Name)
+			if len(tagText) == 0 {
+				return fmt.Errorf("Expected value after '%s:'", f.Name)
 			}
 
-			if strings.HasPrefix(cgText, "true") {
+			if strings.HasPrefix(tagText, "true") {
 				f.Value = "true"
 				f.ValueWasBoolean = true
 
-			} else if strings.HasPrefix(cgText, "false") {
+			} else if strings.HasPrefix(tagText, "false") {
 				f.Value = "false"
 				f.ValueWasBoolean = true
 
-			} else if cgText[0] == '"' {
-				cgText = cgText[1:]
-				var idx = strings.IndexByte(cgText, '"')
+			} else if tagText[0] == '"' {
+				tagText = tagText[1:]
+				var idx = strings.IndexByte(tagText, '"')
 
 				if idx == -1 {
-					return flags, fmt.Errorf("Expected closing quote")
+					return fmt.Errorf("Expected closing quote")
 				}
 
-				f.Value = cgText[0:idx]
+				f.Value = tagText[0:idx]
 
-				cgText = strings.TrimSpace(cgText[idx+1:])
+				tagText = strings.TrimSpace(tagText[idx+1:])
 
 			} else {
-				return flags, fmt.Errorf("Expected value after '%s:'", f.Name)
+				return fmt.Errorf("Expected value after '%s:'", f.Name)
 			}
 		}
 
-		flags = append(flags, f)
+		// TODO: Handle unknown/remaining tags
+
+		if err = fn(f); err != nil {
+			if err == UnknownFlag {
+				if f.FoundColon {
+					b.Tag += f.Name + `:"` + f.Value + `" `
+				} else {
+					b.Tag += f.Name + " "
+				}
+			} else {
+				return err
+			}
+		}
 	}
 
-	return flags, err
+	b.Tag = strings.TrimSpace(b.Tag)
+
+	return nil
 }
 
 func (self *FileData) generateCode() error {
@@ -228,7 +242,9 @@ func (self *FileData) generateCode() error {
 	// Run the go code formatter to make sure syntax is correct before writing.
 	b, err := format.Source(buf.Bytes())
 	if err != nil {
-		return err
+		b = buf.Bytes()
+		fmt.Println(string(buf.Bytes()))
+		//		return err
 	}
 
 	file, err := os.Create(self.File)
@@ -259,24 +275,6 @@ import (
   {{printf "%q" $imp -}}
   {{end -}}
 )
-
-
-/******************************************************************************
-  STRUCT SUMMARY
-
-******************************************************************************/
-
-
-
-/******************************************************************************
-	ENUM SUMMARY
-{{range $enum := .Enums}}
-{{$enum.Name}} (type {{printf "%sEnum" $enum.Name}}, {{$enum.GetIntType}})
-{{- range $f := $enum.Fields}}
-	{{ printf "%s %d %q %q" $f.Name $f.Value $f.String $f.Description -}}
-{{end}}
-{{end -}}
-******************************************************************************/
 
 
 {{- template "generate_union" .Unions}}

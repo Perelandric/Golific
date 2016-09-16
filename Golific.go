@@ -38,6 +38,7 @@ type golificObj interface {
 
 type FileData struct {
 	Package string
+	Name    string
 	File    string
 	Enums   []*EnumRepr
 	Structs []*StructRepr
@@ -57,6 +58,7 @@ func (self *FileData) DoFile(filePath string) error {
 
 	var dir, filename = filepath.Split(filePath)
 
+	self.Name = filename
 	self.File = filepath.Join(dir, "golific____"+filename)
 
 	ast.Walk(self, f)
@@ -104,32 +106,38 @@ func (self *FileData) tryDecl(cList []*ast.Comment, spec *ast.TypeSpec) {
 		return
 	}
 
-	cgText = strings.TrimSpace(cgText[len(prefix):]) // Strip away the prefix
+	strct, ok := spec.Type.(*ast.StructType)
+	if !ok || strct.Incomplete {
+		err = fmt.Errorf("Expected 'struct' type for %s", prefix)
+	}
 
-	log.SetPrefix(fmt.Sprintf("golific-%s: ", prefix))
+	if err == nil {
+		cgText = strings.TrimSpace(cgText[len(prefix):]) // Strip away the prefix
 
-	switch prefix {
-	case "@enum":
-		err = self.newEnum(cgText, cList[1:], spec)
+		log.SetPrefix(fmt.Sprintf("golific-%s (%s): ", prefix, self.Name))
 
-	case "@struct":
-		err = self.newStruct(cgText, cList[1:], spec)
-		/*
-			case "@union":
-				return self.doUnion
-		*/
+		switch prefix {
+		case "@enum":
+			err = self.newEnum(cgText, cList[1:], spec, strct)
 
-	case "@enum-defaults":
-		err = self.doEnumDefaults(cgText)
+		case "@struct":
+			err = self.newStruct(cgText, cList[1:], spec, strct)
 
-	case "@struct-defaults":
-		cgText, err = self.doStructDefaults(cgText)
-		/*
-			case "@union-defaults":
-				cgText, err = self.doUnionDefaults(cgText)
-		*/
-	default:
-		log.Fatalf("Unknown prefix %q\n", prefix)
+		case "@union":
+			err = self.newUnion(cgText, cList[1:], spec, strct)
+
+		case "@enum-defaults":
+			err = self.doEnumDefaults(cgText)
+
+		case "@struct-defaults":
+			err = self.doStructDefaults(cgText)
+
+		case "@union-defaults":
+			err = self.doUnionDefaults(cgText)
+
+		default:
+			log.Fatalf("Unknown prefix %q\n", prefix)
+		}
 	}
 
 	if err != nil {

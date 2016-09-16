@@ -1,5 +1,10 @@
 package main
 
+import (
+	"fmt"
+	"go/ast"
+)
+
 /*
 // Generated
 type MyUnion interface{
@@ -34,137 +39,89 @@ type UnionDefaults struct {
 
 type UnionRepr struct {
 	UnionDefaults
-	Name   string
 	Fields []*UnionFieldRepr
 }
 
 type UnionFieldRepr struct {
 	BaseFieldRepr
-	Type string // Union member type
+	astField *ast.Field
 }
 
 var unionDefaults UnionDefaults
 
-func init() {
-	unionDefaults.flags = 0
-}
-
-/*
-
-func (self *UnionDefaults) gatherFlags(cgText string) (string, error) {
-	flags, err := genericGatherFlags(cgText, self == &unionDefaults)
-	if err != nil {
-		return cgText, err
-	}
-
-	for i := range flags {
-		var flag = flags[i]
-
-		switch strings.ToLower(flag.Name) {
-
+func (self *UnionDefaults) gatherFlags(tagText string) error {
+	return self.genericGatherFlags(tagText, func(flag Flag) error {
+		switch flag.Name {
 		default:
-			flags[i].unknown = true
+			return UnknownFlag
 		}
-	}
-
-	return cgText, nil
+		return nil
+	})
 }
 
-func (self *UnionRepr) GetUniqueMethodName() string {
-	return self.Name + "_union_" + self.getUniqueId()
+func (self *FileData) doUnionDefaults(tagText string) error {
+	return unionDefaults.gatherFlags(tagText)
 }
 
-func (self *FileData) doUnionDefaults(cgText string) (string, error) {
-	return unionDefaults.gatherFlags(cgText)
-}
+func (self *FileData) newUnion(tagText string, docs []*ast.Comment,
+	spec *ast.TypeSpec, strct *ast.StructType) error {
 
-func (self *FileData) doUnion(cgText string, docs []string) (string, string, error) {
 	var err error
 
-	union := UnionRepr{
+	union_repr := UnionRepr{
 		UnionDefaults: unionDefaults, // copy of current defaults
 	}
-	union.UnionDefaults.Base.docs = docs
 
-	if !unicode.IsSpace(rune(cgText[0])) {
-		return cgText, "",
-			fmt.Errorf("@union is expected to be followed by a space and the name.")
+	if err = union_repr.setDocsAndName(docs, spec); err != nil {
+		return err
 	}
 
-	cgText, foundNewline := trimLeftCheckNewline(cgText)
-	if foundNewline {
-		return cgText, "",
-			fmt.Errorf("The name must be on the same line as the @union")
+	if err = union_repr.gatherFlags(tagText); err != nil {
+		return err
 	}
 
-	if cgText, union.Name, err = getIdent(cgText); err != nil {
-		return cgText, union.Name, err
+	if err = union_repr.doFields(strct.Fields); err != nil {
+		return err
 	}
 
-	if cgText, err = union.gatherFlags(cgText); err != nil {
-		return cgText, union.Name, err
-	}
+	self.Unions = append(self.Unions, &union_repr)
 
-	if cgText, err = union.doFields(cgText); err != nil {
-		return cgText, union.Name, err
-	}
-
-	self.Unions = append(self.Unions, &union)
-
-	return cgText, union.Name, union.validate()
-}
-
-func (self *UnionRepr) validate() error {
 	return nil
 }
 
-func (self *UnionRepr) doFields(cgText string) (_ string, err error) {
+func (self *UnionRepr) doFields(fields *ast.FieldList) (err error) {
+	if len(fields.List) == 0 {
+		return fmt.Errorf("@unions must have at least one member defined")
+	}
 
-	for len(cgText) > 0 {
-		var foundPrefix bool
-		var f = UnionFieldRepr{}
+	for _, field := range fields.List {
+		var f = UnionFieldRepr{astField: field}
 
-		if foundPrefix = f.gatherCodeComments(cgText); foundPrefix {
-			return cgText, nil
+		if err := f.gatherCodeCommentsAndName(field, true); err != nil {
+			return err
 		}
 
-		if cgText, f.Type, err = getType(cgText); err != nil {
-			return cgText, err
+		if f.flags&embedded == 0 {
+			return fmt.Errorf("@union members must be defined as embedded fields")
 		}
 
-		if cgText, err = f.gatherFlags(cgText); err != nil {
-			return cgText, err
+		if err = f.gatherFlags(getFlags(field.Tag)); err != nil {
+			return err
 		}
 
 		self.Fields = append(self.Fields, &f)
 	}
 
-	if len(self.Fields) == 0 {
-		return cgText, fmt.Errorf("Unions must have at least one member defined")
-	}
-
-	return cgText, nil
+	return nil
 }
 
-func (self *UnionFieldRepr) gatherFlags(cgText string) (string, error) {
-	const warnExported = "WARNING: The %s method %q is not exported.\n"
-
-	flags, err := genericGatherFlags(cgText, true)
-	if err != nil {
-		return cgText, err
-	}
-
-	for i := range flags {
-		var flag = flags[i]
-
-		switch strings.ToLower(flag.Name) {
-
+func (self *UnionFieldRepr) gatherFlags(tagText string) error {
+	return self.genericGatherFlags(tagText, func(flag Flag) error {
+		switch flag.Name {
 		default:
-			flags[i].unknown = true
+			return UnknownFlag
 		}
-	}
-
-	return cgText, nil
+	})
 }
 
 func (self *FileData) GatherUnionImports() {
@@ -172,8 +129,13 @@ func (self *FileData) GatherUnionImports() {
 		return
 	}
 	self.Imports["encoding/json"] = true
+	self.Imports["Golific/gJson"] = true
 }
-*/
+
+func (self *UnionRepr) GetUniqueMethodName() string {
+	return self.Name + "_union_" + self.getUniqueId()
+}
+
 var union_tmpl = `
 {{- define "generate_union"}}
 {{- range $union := .}}
@@ -185,7 +147,7 @@ var union_tmpl = `
 {{$union.Name}} union
 
 ******************************/
-/*
+
 type {{$union.Name}} interface {
   {{$methodName}}()
 }

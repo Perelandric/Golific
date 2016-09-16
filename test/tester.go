@@ -8,33 +8,29 @@ import (
 //go:generate Golific $GOFILE
 
 /*
-@ union
+@union
 */
-/*
 type __TestUnion struct {
 	FooEnum
 	AnimalEnum
 	Tester
 }
-*/
 
 /*
-@ union
+@union
 */
-/*
-type AnotherUnion struct {
+type __AnotherUnion struct {
 	Tester
 	OofEnum
 }
-*/
 
 /*
 @enum
 bitflags bitflag_separator:"," iterator_name:"foobar" json:"string"
 */
 type __Foo struct {
-	Bar int `string:"bar"`
-	Baz int `string:"baz" description:"This is the description"`
+	Bar int `gString:"bar"`
+	Baz int `gString:"baz" gDescription:"This is the description"`
 	Buz int
 }
 
@@ -42,9 +38,9 @@ type __Foo struct {
 @enum
 */
 type __Oof struct {
-	Bar int `string:"bar"`
-	Baz int `value:"123"`
-	Buz int `description:"Some description"`
+	Bar int `gString:"bar"`
+	Baz int `gValue:"123"`
+	Buz int `gDescription:"Some description"`
 }
 
 /*
@@ -54,16 +50,17 @@ json:"string"
 // An enum to test the @enum descriptor
 type __Animal struct {
 	// Dog is a dog
-	Dog int `string:"doggy"
-			description:"Your best friend, and you know it."`
+	Dog int `gString:"doggy"
+			gDescription:"Your best friend, and you know it."`
 
 	// Cat is a cat
-	Cat int `string:"kitty"
-			description:"Your best friend, but doesn't always show it."
-			default`
+	Cat int `gDefault
+			gString:"kitty"
+			gDescription:"Your best friend, but doesn't always show it."`
 
 	// Horse is a horse (of course)
-	Horse int `string:"horsie" description:"Everyone loves horses."`
+	Horse int `gString:"horsie"
+			gDescription:"Everyone loves horses."`
 }
 
 /*
@@ -78,12 +75,12 @@ type __Tester struct {
 	// The first item
 	Test1 string `json:"tester1"`
 
-	Test2 string `read`
-	Test3 string `write json:"tester3,omitempty"`
+	Test2 string `gRead`
+	Test3 string `gWrite json:"tester3,omitempty"`
 
 	// The fourth item
-	Test4 string `read write`
-	Test5 string `read write` /*`
+	Test4 string `gRead gWrite`
+	Test5 string `gRead gWrite` /*`
 	gRead
 	gWrite
 	gString:"the string"

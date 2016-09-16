@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"go/ast"
-	"strconv"
 	"strings"
 )
 
@@ -11,6 +10,8 @@ const (
 	read = 1 << iota
 	write
 	embedded
+	jsonOmitEmpty
+	hasPrivateFields
 )
 
 type StructDefaults struct {
@@ -24,41 +25,27 @@ type StructRepr struct {
 
 type StructFieldRepr struct {
 	BaseFieldRepr
-	Tag         string // Typical struct field tags
 	Read        string // Method name for reads
 	Write       string // Method name for writes
 	DefaultExpr string // Default expression
+	JsonName    string // Name used for json [un]marshaling
+	JsonNameCI  string // Case insensitive version of JsonName
+	astField    *ast.Field
 }
 
 var structDefaults StructDefaults
 
-func init() {
-	structDefaults.flags = 0
-}
-
-func (self *StructDefaults) gatherFlags(cgText string) (string, error) {
-	flags, err := genericGatherFlags(cgText)
-	if err != nil {
-		return cgText, err
-	}
-
-	for i := range flags {
-		var flag = flags[i]
-
-		switch strings.ToLower(flag.Name) {
+func (self *StructDefaults) gatherFlags(tagText string) error {
+	return self.genericGatherFlags(tagText, func(flag Flag) error {
+		switch flag.Name {
 		case "drop_json": // Do not generate JSON marshaling methods
-			if err = self.doBooleanFlag(flag, dropJson); err != nil {
-				return cgText, err
-			}
-
-			fallthrough // Not available as a default value
+			return self.doBooleanFlag(flag, dropJson)
 
 		default:
-			flags[i].unknown = true
+			return UnknownFlag
 		}
-	}
-
-	return cgText, nil
+		return nil
+	})
 }
 
 func (self *StructRepr) GetPrivateTypeName() string {
@@ -68,7 +55,13 @@ func (self *StructRepr) GetJSONTypeName() string {
 	return "json_" + self.getUniqueId()
 }
 func (self *StructRepr) DoJson() bool { return self.flags&dropJson == 0 }
+func (self *StructRepr) HasPrivateFields() bool {
+	return self.flags&hasPrivateFields == hasPrivateFields
+}
 
+func (self *StructFieldRepr) HasJSONOmitEmpty() bool {
+	return self.flags&jsonOmitEmpty == jsonOmitEmpty
+}
 func (self *StructFieldRepr) DoRead() bool  { return len(self.Read) > 0 }
 func (self *StructFieldRepr) DoWrite() bool { return len(self.Write) > 0 }
 func (self *StructFieldRepr) DoDefaultExpr() bool {
@@ -92,16 +85,6 @@ func (self *StructFieldRepr) GetSpaceAndTag() string {
 
 func (self *StructFieldRepr) CouldBeJSON() bool {
 	return isExportedIdent(self.Name) && !self.IsEmbedded()
-}
-
-func (self *StructFieldRepr) PossibleJSONKeys() string {
-	if t := self.getJSONFieldTagName(); t != "" {
-		return strconv.Quote(t)
-	}
-	return strings.Join([]string{
-		strconv.Quote(self.Name),
-		strconv.Quote(strings.ToLower(string(self.Name[0])) + self.Name[1:]),
-	}, ", ")
 }
 
 func (self *StructFieldRepr) getJSONFieldTagName() string {
@@ -129,17 +112,12 @@ func (self *StructFieldRepr) GetNameMaybeType() string {
 	return self.Name
 }
 
-func (self *FileData) doStructDefaults(cgText string) (string, error) {
-	return structDefaults.gatherFlags(cgText)
+func (self *FileData) doStructDefaults(tagText string) error {
+	return structDefaults.gatherFlags(tagText)
 }
 
-func (self *FileData) newStruct(
-	cgText string, docs []*ast.Comment, spec *ast.TypeSpec) error {
-
-	strct, ok := spec.Type.(*ast.StructType)
-	if !ok || strct.Incomplete {
-		return fmt.Errorf("Expected 'struct' type for @enum")
-	}
+func (self *FileData) newStruct(tagText string, docs []*ast.Comment,
+	spec *ast.TypeSpec, strct *ast.StructType) error {
 
 	var err error
 
@@ -151,7 +129,7 @@ func (self *FileData) newStruct(
 		return err
 	}
 
-	if cgText, err = strct_repr.gatherFlags(strings.TrimSpace(cgText)); err != nil {
+	if err = strct_repr.gatherFlags(tagText); err != nil {
 		return err
 	}
 
@@ -168,19 +146,19 @@ func (self *StructRepr) doFields(fields *ast.FieldList) (err error) {
 	const name_conflit = "%q method name conflicts with property name %q"
 
 	if len(fields.List) == 0 {
-		return fmt.Errorf("Structs must have at least one field defined")
+		return fmt.Errorf("@structs must have at least one field defined")
 	}
 
 	for _, field := range fields.List {
-		var f = StructFieldRepr{}
+		var f = StructFieldRepr{astField: field}
 
 		if err := f.gatherCodeCommentsAndName(field, true); err != nil {
 			return err
 		}
 
+		f.JsonName = f.Name
+
 		if f.flags&embedded == 0 {
-			// TODO: I need `gatherFlags` to alter the string and keep any unrecognized
-			// tags, since those will need to be added on to the resulting struct.
 			if err = f.gatherFlags(getFlags(field.Tag)); err != nil {
 				return err
 			}
@@ -195,6 +173,8 @@ func (self *StructRepr) doFields(fields *ast.FieldList) (err error) {
 
 				// if `read` OR `write` are set (but not both), set default name if needed
 			} else if f.flags&read == read || f.flags&write == write {
+				self.flags |= hasPrivateFields
+
 				if f.flags&read == read && len(f.Read) == 0 {
 					f.Read = f.Name
 				}
@@ -205,41 +185,54 @@ func (self *StructRepr) doFields(fields *ast.FieldList) (err error) {
 			}
 		}
 
+		f.JsonNameCI = strings.ToLower(f.JsonName)
+
 		self.Fields = append(self.Fields, &f)
 	}
 
 	return nil
 }
 
-func (self *StructFieldRepr) gatherFlags(cgText string) error {
-	flags, err := genericGatherFlags(cgText)
-	if err != nil {
-		return err
-	}
+func (self *StructFieldRepr) gatherFlags(tagText string) error {
+	return self.genericGatherFlags(tagText, func(flag Flag) error {
+		switch flag.Name {
 
-	for i := range flags {
-		var flag = flags[i]
-
-		switch strings.ToLower(flag.Name) {
-
-		case "read": // Set read access
+		case "gRead": // Set read access
 			self.flags |= read
 			if flag.FoundColon {
 				self.Read = flag.Value
 			}
 
-		case "write": // Set write access
+		case "gWrite": // Set write access
 			self.flags |= write
 			if flag.FoundColon {
 				self.Write = flag.Value
 			}
 
-		default:
-			flags[i].unknown = true
-		}
-	}
+		case "json": // Just to find out if it has `omitempty`
+			if len(flag.Value) > 0 {
+				if idx := strings.IndexByte(flag.Value, ','); idx == -1 {
+					self.JsonName = flag.Value
 
-	return nil
+				} else {
+					jsonName := strings.TrimSpace(flag.Value[0:idx])
+					if len(jsonName) > 0 {
+						self.JsonName = jsonName
+					}
+
+					if strings.Contains(flag.Value[idx:], "omitempty") {
+						self.flags |= jsonOmitEmpty
+					}
+				}
+			}
+
+			return UnknownFlag
+
+		default:
+			return UnknownFlag
+		}
+		return nil
+	})
 }
 
 func (self *FileData) GatherStructImports() {
@@ -247,9 +240,86 @@ func (self *FileData) GatherStructImports() {
 		return
 	}
 	self.Imports["encoding/json"] = true
+	self.Imports["Golific/gJson"] = true
+}
+
+func (self *StructFieldRepr) GetJSONOmitCondition() string {
+	if self.HasJSONOmitEmpty() {
+		switch n := self.astField.Type.(type) {
+		case *ast.ArrayType, *ast.MapType:
+			return "len(self." + self.GetNameMaybeType() + ") != 0"
+
+		case *ast.Ident:
+			switch n.Name {
+			case "bool":
+				return "!self." + self.GetNameMaybeType()
+
+			case "string":
+				return "len(self." + self.GetNameMaybeType() + ") != 0"
+
+			case "int", "int64", "int32", "int16", "int8", "uint", "uint64", "uint32",
+				"uint16", "uint8", "float64", "float32":
+				return "self." + self.GetNameMaybeType() + " != 0"
+			}
+		default:
+			return "z, ok := self." + self.GetNameMaybeType() + ".(gJson.Zeroable); !ok || !z.IsZero()"
+		}
+	}
+
+	return "true"
 }
 
 var struct_tmpl = `
+{{- define "JSONEncodeField" -}}
+	{{- $f := . -}}
+	{{- $cond := $f.GetJSONOmitCondition -}}
+
+	{{if ne $cond "true" -}}
+	if {{$cond}} {
+	{{end -}}
+
+		{{if $f.IsEmbedded -}}
+		{
+			// Embedded field
+			var wasFirst = first
+		{{end -}}
+
+		if first {
+			first = false
+		} else {
+			encoder.WriteRawByte(',')
+		}
+
+		{{- if $f.IsEmbedded}}
+			var didWrite bool
+
+			if je, ok := interface{}(self.{{$f.GetNameMaybeType}}).(gJson.JSONEncodable); ok {
+				didWrite = encoder.EmbedEncodedStruct(je)
+			} else {
+				didWrite = encoder.EmbedMarshaledStruct(self.{{$f.GetNameMaybeType}})
+			}
+
+			if !didWrite {
+				if wasFirst { // Still haven't had first write
+					first = true
+				} else { // Drop the comma that was added
+					encoder.Truncate(encoder.Len()-1)
+				}
+			}
+		}
+
+		{{- else}}
+		encoder.WriteRawString("\"{{$f.JsonName}}\":")
+		encoder.Encode(self.{{$f.Name}})
+		{{- end}}
+
+	{{- if ne $cond "true" -}}
+	}
+	{{- end -}}
+{{end}}
+
+
+
 {{- define "generate_struct"}}
 {{- range $struct := .}}
 {{- $privateType := $struct.GetPrivateTypeName}}
@@ -273,6 +343,7 @@ type {{$struct.Name}} struct {
   {{end -}}
 }
 
+
 type {{$privateType}} struct {
   {{- range $f := $struct.Fields}}
   {{- if $f.IsPrivate}}
@@ -280,6 +351,19 @@ type {{$privateType}} struct {
   {{- end -}}
   {{end -}}
 }
+
+
+// JSONEncode implements part of Golific's JSONEncodable interface.
+func (self *{{$privateType}}) JSONEncode(encoder *gJson.Encoder) {
+	var first = true
+
+	{{- range $f := $struct.Fields -}}
+	{{- if $f.IsPrivate}}
+	{{template "JSONEncodeField" $f}}
+	{{end -}}
+	{{end -}}
+}
+
 
 type {{$jsonType}} struct {
   *{{- $privateType}}
@@ -291,6 +375,7 @@ type {{$jsonType}} struct {
   {{- end -}}
   {{end -}}
 }
+
 
 {{- range $f := $struct.Fields}}
 {{- if $f.DoRead}}
@@ -312,6 +397,33 @@ func (self *{{$struct.Name}}) {{$f.Write}} ( v {{$f.Type}} ) {
 }
 {{end -}}
 {{end -}}
+
+
+// JSONEncode implements part of Golific's JSONEncodable interface.
+func (self *{{$struct.Name}}) JSONEncode(encoder *gJson.Encoder) {
+	encoder.WriteRawByte('{')
+
+	{{if $struct.HasPrivateFields}}
+	var startPos = encoder.Len()
+
+	// Encodes only the fields of the struct, without curly braces
+	self.private.JSONEncode(encoder)
+
+	var first = encoder.Len() == startPos
+
+	{{else}}
+	var first = true
+	{{end}}
+
+	{{- range $f := $struct.Fields -}}
+	{{- if or $f.IsEmbedded $f.IsPublic}}
+	{{template "JSONEncodeField" $f}}
+	{{end -}}
+	{{end -}}
+
+	encoder.WriteRawByte('}')
+}
+
 
 {{- if $struct.DoJson}}
 func (self *{{$struct.Name}}) MarshalJSON() ([]byte, error) {
@@ -342,10 +454,10 @@ func (self *{{$struct.Name}}) UnmarshalJSON(j []byte) error {
 	for key, rawMsg := range m {
 		// The anon structs in each case are needed for field tags
 
-		switch key {
+		switch strings.ToLower(key) {
 		{{- range $f := $struct.Fields -}}
 		{{if $f.CouldBeJSON}}
-		case {{$f.PossibleJSONKeys}}:
+		case {{printf "%q" $f.JsonNameCI}}:
 
 		var x struct {
 			F {{$f.Type}}{{$f.GetSpaceAndTag}}
