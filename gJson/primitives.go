@@ -1,77 +1,133 @@
 package gJson
 
 import (
+	"encoding/json"
 	"strconv"
 	"unicode/utf8"
 )
 
-func (e *Encoder) Encode(data interface{}) {
+// EncodeKeyVal writes the provide key/value to the encoder, with a leading
+// comma if `isFirst` is `false`.
+// The pair is not written if `canElide` is `true` and the value provided is a
+// zero value, is a JSONEncoder that did returned `false`, or a `Marshaler` that
+// panic'd or did not write anything.
+func (e *Encoder) EncodeKeyVal(k string, v interface{}, isFirst, canElide bool) bool {
+	var pos = e.b.Len()
+
+	if !isFirst {
+		e.writeByte(',')
+	}
+
+	e.EncodeString(k, false)
+	e.writeByte(':')
+
+	if e.Encode(v, canElide) == false {
+		e.b.Truncate(pos)
+		return isFirst
+	}
+	return false
+}
+
+func (e *Encoder) Encode(data interface{}, canElide bool) bool {
 	if data == nil {
-		e.EncodeNull()
-		return
+		return e.EncodeNull(canElide)
 	}
 
 	switch d := data.(type) {
 	case string:
-		e.EncodeString(d)
+		return e.EncodeString(d, canElide)
 	case bool:
-		e.EncodeBool(d)
+		return e.EncodeBool(d, canElide)
+
 	case int:
-		e.EncodeInt(int64(d))
+		return e.EncodeInt(int64(d), canElide)
 	case int64:
-		e.EncodeInt(int64(d))
+		return e.EncodeInt(int64(d), canElide)
 	case int32:
-		e.EncodeInt(int64(d))
+		return e.EncodeInt(int64(d), canElide)
 	case int16:
-		e.EncodeInt(int64(d))
+		return e.EncodeInt(int64(d), canElide)
 	case int8:
-		e.EncodeInt(int64(d))
+		return e.EncodeInt(int64(d), canElide)
+
 	case uint:
-		e.EncodeUint(uint64(d))
+		return e.EncodeUint(uint64(d), canElide)
 	case uint64:
-		e.EncodeUint(uint64(d))
+		return e.EncodeUint(uint64(d), canElide)
 	case uint32:
-		e.EncodeUint(uint64(d))
+		return e.EncodeUint(uint64(d), canElide)
 	case uint16:
-		e.EncodeUint(uint64(d))
+		return e.EncodeUint(uint64(d), canElide)
 	case uint8:
-		e.EncodeUint(uint64(d))
+		return e.EncodeUint(uint64(d), canElide)
+
 	case float32:
-		e.EncodeFloat32(d)
+		return e.EncodeFloat32(d, canElide)
 	case float64:
-		e.EncodeFloat64(d)
-	case JSONEncodable:
-		d.JSONEncode(e)
+		return e.EncodeFloat64(d, canElide)
+
 	default:
-		e.marshalFallback(d)
+		if canElide {
+			if de, ok := data.(Elidable); ok && de.CanElide() {
+				return false
+			}
+		}
+
+		if je, ok := data.(JSONEncodable); ok {
+			if !je.JSONEncode(e) {
+				return e.EncodeNull(canElide)
+			}
+			return true
+		}
 	}
+
+	return e.marshalFallback(data, canElide)
 }
 
-func (e *Encoder) EncodeNull() {
+func (e *Encoder) marshalFallback(d interface{}, canElide bool) bool {
+	if b, err := json.Marshal(d); err == nil && len(b) > 0 {
+		e.write(b)
+		return true
+	}
+	return e.EncodeNull(canElide)
+}
+
+func (e *Encoder) EncodeNull(canElide bool) bool {
+	if canElide {
+		return false
+	}
 	e.writeString("null")
+	return true
 }
 
-func (e *Encoder) EncodeBool(b bool) {
+func (e *Encoder) EncodeBool(b bool, canElide bool) bool {
 	if b {
 		e.writeString("true")
 	} else {
+		if canElide {
+			return false
+		}
 		e.writeString("false")
 	}
+	return true
 }
 
-func (e *Encoder) EncodeInt(i int64) {
+func (e *Encoder) EncodeInt(i int64, canElide bool) bool {
 	if i < 0 {
 		e.writeByte('-')
-		e.EncodeUint(uint64(-i))
-	} else {
-		e.EncodeUint(uint64(i))
+		return e.EncodeUint(uint64(-i), canElide)
 	}
+	return e.EncodeUint(uint64(i), canElide)
 }
 
-func (e *Encoder) EncodeUint(i uint64) {
+func (e *Encoder) EncodeUint(i uint64, canElide bool) bool {
+	if canElide && i == 0 {
+		return false
+	}
+
 	if i < 10 {
 		e.writeByte(byte(i) | 48)
-		return
+		return true
 	}
 
 	var start = e.b.Len()
@@ -87,17 +143,30 @@ func (e *Encoder) EncodeUint(i uint64) {
 		start = start + 1
 		end = end - 1
 	}
+
+	return true
 }
 
-func (e *Encoder) EncodeFloat32(f float32) {
+func (e *Encoder) EncodeFloat32(f float32, canElide bool) bool {
+	if canElide && f == 0 {
+		return false
+	}
 	e.writeString(strconv.FormatFloat(float64(f), 'g', -1, 32))
+	return true
 }
 
-func (e *Encoder) EncodeFloat64(f float64) {
+func (e *Encoder) EncodeFloat64(f float64, canElide bool) bool {
+	if canElide && f == 0 {
+		return false
+	}
 	e.writeString(strconv.FormatFloat(f, 'g', -1, 64))
+	return true
 }
 
-func (e *Encoder) EncodeString(s string) {
+func (e *Encoder) EncodeString(s string, canElide bool) bool {
+	if canElide && s == "" {
+		return false
+	}
 	e.writeByte('"')
 
 	i, start := 0, 0
@@ -155,9 +224,10 @@ func (e *Encoder) EncodeString(s string) {
 	e.writeString(s[start:])
 
 	e.writeByte('"')
+
+	return true
 }
 
-const hex = "0123456789ABCDEF"
 const _REPLACEMENT = `\ufffd`
 
 var escCheck = [0x80]byte{

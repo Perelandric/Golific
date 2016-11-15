@@ -1,9 +1,6 @@
 package gJson
 
-import (
-	"bytes"
-	"encoding/json"
-)
+import "bytes"
 
 type Encoder struct {
 	b bytes.Buffer
@@ -27,14 +24,6 @@ func (e *Encoder) write(b []byte) {
 	_, err := e.b.Write(b)
 	if err != nil {
 		panic(err)
-	}
-}
-
-func (e *Encoder) marshalFallback(d interface{}) {
-	if b, err := json.Marshal(d); err != nil {
-		panic(err)
-	} else {
-		e.write(b)
 	}
 }
 

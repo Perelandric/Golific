@@ -58,7 +58,7 @@ type __Animal struct {
 			gString:"kitty"
 			gDescription:"Your best friend, but doesn't always show it."`
 
-	// Horse is a horse (of course)
+	// Horse is a horse
 	Horse int `gString:"horsie"
 			gDescription:"Everyone loves horses."`
 }
@@ -71,6 +71,8 @@ type __Animal struct {
 // And another line or two for good measure
 type __Tester struct {
 	*AnimalEnum
+
+	Arr []*AnimalEnum
 
 	// The first item
 	Test1 string `json:"tester1"`

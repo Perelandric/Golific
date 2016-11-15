@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/parser"
+	"go/printer"
 	"go/token"
 	"log"
 	"math/rand"
@@ -32,11 +34,20 @@ func main() {
 	}
 }
 
-type golificObj interface {
-	finish(*ast.Node, []string) error
+var b bytes.Buffer
+
+// Not thread safe
+func typeString(fset *token.FileSet, node interface{}) (string, error) {
+	defer b.Reset()
+
+	if err := printer.Fprint(&b, fset, node); err != nil {
+		return "", err
+	}
+	return b.String(), nil
 }
 
 type FileData struct {
+	fset    *token.FileSet
 	Package string
 	Name    string
 	File    string
@@ -47,9 +58,9 @@ type FileData struct {
 }
 
 func (self *FileData) DoFile(filePath string) error {
-	fset := token.NewFileSet()
+	self.fset = token.NewFileSet()
 
-	f, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
+	f, err := parser.ParseFile(self.fset, filePath, nil, parser.ParseComments)
 	if err != nil {
 		return err
 	}
@@ -118,13 +129,13 @@ func (self *FileData) tryDecl(cList []*ast.Comment, spec *ast.TypeSpec) {
 
 		switch prefix {
 		case "@enum":
-			err = self.newEnum(cgText, cList[1:], spec, strct)
+			err = self.newEnum(self.fset, cgText, cList[1:], spec, strct)
 
 		case "@struct":
-			err = self.newStruct(cgText, cList[1:], spec, strct)
+			err = self.newStruct(self.fset, cgText, cList[1:], spec, strct)
 
 		case "@union":
-			err = self.newUnion(cgText, cList[1:], spec, strct)
+			err = self.newUnion(self.fset, cgText, cList[1:], spec, strct)
 
 		case "@enum-defaults":
 			err = self.doEnumDefaults(cgText)

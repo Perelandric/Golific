@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/format"
+	"go/token"
 	"math/rand"
 	"os"
 	"strconv"
@@ -14,6 +15,30 @@ import (
 )
 
 const _defaults = "-defaults"
+
+const (
+	// shared
+	dropJson = 1 << iota
+
+	// for enum
+	bitflags
+	jsonMarshalIsString
+	jsonUnmarshalIsString
+	xmlMarshalIsString
+	xmlUnmarshalIsString
+	dropXml
+	hasDefault
+	hasCustomValue
+
+	// for struct
+	read
+	write
+	embedded
+	jsonOmitEmpty
+	hasPrivateFields
+	hasPublicFields
+	hasEmbeddedFields
+)
 
 type Flag struct {
 	Name            string
@@ -60,6 +85,7 @@ func (self *Base) getUniqueId() string {
 }
 
 type Base struct {
+	fset   *token.FileSet
 	flags  uint
 	Tag    string // for processing flags, and for struct field tags
 	unique string
@@ -109,7 +135,7 @@ type BaseFieldRepr struct {
 
 // Gathers code comments. Comments are abandoned if a @prefix is found after.
 func (self *BaseFieldRepr) gatherCodeCommentsAndName(
-	f *ast.Field, allow_embedded bool) error {
+	f *ast.Field, allow_embedded bool) (err error) {
 
 	// Comes from any comment lines before a field
 	if f.Doc != nil {
@@ -130,15 +156,8 @@ func (self *BaseFieldRepr) gatherCodeCommentsAndName(
 		self.Name = f.Names[0].Name
 	}
 
-	if ident, ok := f.Type.(*ast.Ident); ok {
-		self.Type = ident.Name
-
-	} else if star, ok := f.Type.(*ast.StarExpr); ok {
-		if ident, ok := star.X.(*ast.Ident); ok {
-			self.Type = "*" + ident.Name
-		}
-	}
-	return nil
+	self.Type, err = typeString(self.fset, f.Type)
+	return err
 }
 
 func (b *Base) genericGatherFlags(tagText string, fn func(Flag) error) (err error) {
@@ -229,7 +248,7 @@ func (self *FileData) generateCode() error {
 		return nil
 	}
 
-	//	self.GatherUnionImports()
+	self.GatherUnionImports()
 	self.GatherEnumImports()
 	self.GatherStructImports()
 

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"go/ast"
+	"go/token"
 )
 
 /*
@@ -63,14 +64,15 @@ func (self *FileData) doUnionDefaults(tagText string) error {
 	return unionDefaults.gatherFlags(tagText)
 }
 
-func (self *FileData) newUnion(tagText string, docs []*ast.Comment,
-	spec *ast.TypeSpec, strct *ast.StructType) error {
+func (self *FileData) newUnion(fset *token.FileSet, tagText string,
+	docs []*ast.Comment, spec *ast.TypeSpec, strct *ast.StructType) error {
 
 	var err error
 
 	union_repr := UnionRepr{
 		UnionDefaults: unionDefaults, // copy of current defaults
 	}
+	union_repr.fset = fset
 
 	if err = union_repr.setDocsAndName(docs, spec); err != nil {
 		return err
@@ -96,6 +98,7 @@ func (self *UnionRepr) doFields(fields *ast.FieldList) (err error) {
 
 	for _, field := range fields.List {
 		var f = UnionFieldRepr{astField: field}
+		f.fset = self.fset
 
 		if err := f.gatherCodeCommentsAndName(field, true); err != nil {
 			return err

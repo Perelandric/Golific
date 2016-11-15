@@ -3,19 +3,8 @@ package main
 import (
 	"fmt"
 	"go/ast"
+	"go/token"
 	"strconv"
-)
-
-const (
-	bitflags = 1 << iota
-	jsonMarshalIsString
-	jsonUnmarshalIsString
-	xmlMarshalIsString
-	xmlUnmarshalIsString
-	dropJson
-	dropXml
-	hasDefault
-	hasCustomValue
 )
 
 type EnumDefaults struct {
@@ -121,14 +110,15 @@ func (ed *EnumDefaults) gatherFlags(tagText string) error {
 	})
 }
 
-func (self *FileData) newEnum(tagText string, docs []*ast.Comment,
-	spec *ast.TypeSpec, strct *ast.StructType) error {
+func (self *FileData) newEnum(fset *token.FileSet, tagText string,
+	docs []*ast.Comment, spec *ast.TypeSpec, strct *ast.StructType) error {
 
 	var err error
 
 	enum := EnumRepr{
 		EnumDefaults: enumDefaults, // copy of current defaults
 	}
+	enum.fset = fset
 
 	if err = enum.setDocsAndName(docs, spec); err != nil {
 		return err
@@ -162,6 +152,7 @@ func (self *FileData) newEnum(tagText string, docs []*ast.Comment,
 func (self *EnumRepr) doFields(fields *ast.FieldList) (err error) {
 	for _, field := range fields.List {
 		var f = EnumFieldRepr{}
+		f.fset = self.fset
 
 		if err = f.gatherCodeCommentsAndName(field, false); err != nil {
 			return err
@@ -374,11 +365,13 @@ func (self {{$variantType}}) IsDefault() bool {
 	return {{printf "%t" $enum.HasDefault}} && self.{{$uniqField}} == 0
 }
 
-// IsZero returns true of the variant was designated as the default value. It is
-// the same as IsDefault(), but implements the Zeroable interface.
-func (self {{$variantType}}) IsZero() bool {
-	return {{printf "%t" $enum.HasDefault}} && self.{{$uniqField}} == 0
+{{if $enum.HasDefault -}}
+// CanElide returns true of the variant was designated as the default value. It is
+// the same as IsDefault(), but implements the Elidable interface.
+func (self {{$variantType}}) CanElide() bool {
+	return self.{{$uniqField}} == 0
 }
+{{- end}}
 
 // String returns the given string value of the variant. If none has been set,
 // its return value is as though 'Name()' had been called.
@@ -425,12 +418,13 @@ func (self {{$variantType}}) Description() string {
 }
 
 // JSONEncode implements part of Golific's JSONEncodable interface.
-func (self {{$variantType}}) JSONEncode(encoder *gJson.Encoder) {
+func (self {{$variantType}}) JSONEncode(encoder *gJson.Encoder) bool {
 	{{if $enum.JsonMarshalIsString -}}
-	encoder.EncodeString(self.String())
+	encoder.EncodeString(self.String(), false)
 	{{- else -}}
-	encoder.EncodeInt(int64(self.{{$uniqField}}))
+	encoder.EncodeInt(int64(self.{{$uniqField}}), false)
 	{{- end}}
+  return true
 }
 
 {{if $enum.DoJson -}}
