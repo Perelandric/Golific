@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/token"
 	"strconv"
+	"strings"
 )
 
 type EnumDefaults struct {
@@ -36,6 +37,8 @@ func init() {
 func (self *EnumRepr) GetUniqueName() string {
 	return "value_" + self.getUniqueId()
 }
+
+func (efr *EnumFieldRepr) LowerString() string { return strings.ToLower(efr.String) }
 
 func (self *EnumRepr) DoJson() bool    { return self.flags&dropJson == 0 }
 func (self *EnumRepr) DoXml() bool     { return self.flags&dropXml == 0 }
@@ -71,6 +74,14 @@ func (repr *EnumRepr) GetIntType() string {
 		return "uint32"
 	}
 	return "uint64"
+}
+func (self *EnumRepr) GetDefaultValue() int64 {
+	for _, f := range self.Fields {
+		if f.flags&hasDefault == hasDefault {
+			return f.Value
+		}
+	}
+	return 0
 }
 
 func (self *FileData) doEnumDefaults(tagText string) error {
@@ -137,7 +148,7 @@ func (self *FileData) newEnum(fset *token.FileSet, tagText string,
 	var def string
 
 	for _, f := range enum.Fields {
-		if f.flags&hasDefault == hasDefault { // Only one --default variant allowed
+		if enum.flags&hasDefault == hasDefault { // Only one --default variant allowed
 			if len(def) > 0 {
 				return fmt.Errorf("--default was previously defined on %q", def)
 			}
@@ -280,6 +291,7 @@ func (self *FileData) GatherEnumImports() {
 		// If we don't dropJson and we are unmarshaling as a string, we need "log"
 		if repr.flags&(dropJson|jsonUnmarshalIsString) == jsonUnmarshalIsString {
 			self.Imports["log"] = true
+			self.Imports["strings"] = true
 			break
 		}
 	}
@@ -360,18 +372,18 @@ func (self {{$variantType}}) Namespace() string {
 	return {{printf "%q" $enum.Name}}
 }
 
-// IsDefault returns true if the variant was designated as the default value.
+// IsDefault returns true if the variant was designated as the default value, or if
+// there's no explicit default, and it has the zero value.
 func (self {{$variantType}}) IsDefault() bool {
-	return {{printf "%t" $enum.HasDefault}} && self.{{$uniqField}} == 0
+	return self.{{$uniqField}} == {{$enum.GetDefaultValue}}
 }
 
-{{if $enum.HasDefault -}}
-// CanElide returns true of the variant was designated as the default value. It is
-// the same as IsDefault(), but implements the Elidable interface.
+// CanElide returns true if the variant was designated as the default value, or if
+// there's no explicit default, and it has the zero value.
+// This implements the Elidable interface.
 func (self {{$variantType}}) CanElide() bool {
-	return self.{{$uniqField}} == 0
+	return self.IsDefault()
 }
-{{- end}}
 
 // String returns the given string value of the variant. If none has been set,
 // its return value is as though 'Name()' had been called.
@@ -448,9 +460,9 @@ func (self *{{$variantType}}) UnmarshalJSON(b []byte) error {
 		return nil
 	}
 
-	switch s {
+	switch strings.ToLower(s) {
 	{{range $f := .Fields -}}
-	case {{printf "%q" $f.String}}:
+	case {{printf "%q" $f.LowerString}}:
 		self.{{$uniqField}} = {{$f.Value}}
 		return nil
 	{{end -}}

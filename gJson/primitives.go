@@ -2,6 +2,8 @@ package gJson
 
 import (
 	"encoding/json"
+	"fmt"
+	"reflect"
 	"strconv"
 	"unicode/utf8"
 )
@@ -14,6 +16,8 @@ import (
 func (e *Encoder) EncodeKeyVal(k string, v interface{}, isFirst, canElide bool) bool {
 	var pos = e.b.Len()
 
+	fmt.Printf("Encoding: %s, %#v\n\n", k, v)
+
 	if !isFirst {
 		e.writeByte(',')
 	}
@@ -23,9 +27,9 @@ func (e *Encoder) EncodeKeyVal(k string, v interface{}, isFirst, canElide bool) 
 
 	if e.Encode(v, canElide) == false {
 		e.b.Truncate(pos)
-		return isFirst
+		return false
 	}
-	return false
+	return true
 }
 
 func (e *Encoder) Encode(data interface{}, canElide bool) bool {
@@ -71,6 +75,38 @@ func (e *Encoder) Encode(data interface{}, canElide bool) bool {
 			if de, ok := data.(Elidable); ok && de.CanElide() {
 				return false
 			}
+
+			if de, ok := data.(Zeroable); ok && de.IsZero() {
+				return false
+			}
+
+			v := reflect.ValueOf(data)
+
+			if v.CanInterface() && v.IsNil() {
+				return false
+			}
+
+			switch v.Kind() {
+			case reflect.Array, reflect.Slice, reflect.Map:
+				if v.Len() == 0 {
+					return false
+				}
+			case reflect.Interface, reflect.Ptr:
+				if v.IsNil() {
+					return false
+				}
+			}
+
+			if v.CanAddr() {
+				itf := v.Addr().Interface()
+
+				if de, ok := itf.(Elidable); ok && de.CanElide() {
+					return false
+				}
+				if de, ok := itf.(Zeroable); ok && de.IsZero() {
+					return false
+				}
+			}
 		}
 
 		if je, ok := data.(JSONEncodable); ok {
@@ -85,6 +121,8 @@ func (e *Encoder) Encode(data interface{}, canElide bool) bool {
 }
 
 func (e *Encoder) marshalFallback(d interface{}, canElide bool) bool {
+	fmt.Printf("Marshal fallback on: %#v\n\n", d)
+
 	if b, err := json.Marshal(d); err == nil && len(b) > 0 {
 		e.write(b)
 		return true
@@ -99,6 +137,12 @@ func (e *Encoder) EncodeNull(canElide bool) bool {
 	e.writeString("null")
 	return true
 }
+
+/*
+func (e *Encoder) EncodeStruct(s interface{}, canElide bool) bool {
+
+}
+*/
 
 func (e *Encoder) EncodeBool(b bool, canElide bool) bool {
 	if b {

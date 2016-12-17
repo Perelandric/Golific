@@ -58,6 +58,10 @@ func (self *StructRepr) HasEmbeddedFields() bool {
 	return self.flags&hasEmbeddedFields == hasEmbeddedFields
 }
 
+func (self *StructFieldRepr) OriginalCode() string {
+	return fmt.Sprintf("%s %s%s", self.Name, self.Type, self.GetSpaceAndTag())
+}
+
 func (self *StructFieldRepr) HasJSONOmitEmpty() bool {
 	return self.flags&jsonOmitEmpty == jsonOmitEmpty
 }
@@ -248,17 +252,35 @@ func (self *FileData) GatherStructImports() {
 		return
 	}
 	self.Imports["Golific/gJson"] = true
+	self.Imports["reflect"] = true
 
 	for _, s := range self.Structs {
 		if s.DoJson() {
 			self.Imports["encoding/json"] = true
 			self.Imports["strings"] = true
+			self.Imports["fmt"] = true
 			break
 		}
 	}
 }
 
-func (self *StructFieldRepr) GetJSONOmitCondition() string {
+func (self *StructFieldRepr) MaybeStruct() bool {
+	switch n := self.astField.Type.(type) {
+	case *ast.ArrayType, *ast.MapType:
+		return false
+
+	case *ast.Ident:
+		switch n.Name {
+		case "bool", "string",
+			"int", "int64", "int32", "int16", "int8", "uint", "uint64", "uint32",
+			"uint16", "uint8", "float64", "float32":
+			return false
+		}
+	}
+	return true
+}
+
+func (self *StructFieldRepr) CantAvoidEncodingAttempt() string {
 	if self.HasJSONOmitEmpty() {
 		switch n := self.astField.Type.(type) {
 		case *ast.ArrayType, *ast.MapType:
@@ -276,9 +298,9 @@ func (self *StructFieldRepr) GetJSONOmitCondition() string {
 				"uint16", "uint8", "float64", "float32":
 				return "self." + self.GetNameMaybeType() + " != 0"
 			}
-		default:
-			return "z, ok := interface{}(self." + self.GetNameMaybeType() + ").(gJson.Elidable); !ok || !z.CanElide()"
 		}
+
+		return "z, ok := interface{}(self." + self.GetNameMaybeType() + ").(gJson.Elidable); !ok || !z.CanElide()"
 	}
 
 	return "true"
@@ -288,26 +310,41 @@ var struct_tmpl = `
 {{- define "JSONEncodeField" -}}
 	{{- $f := . -}}
 
-		{{if $f.IsEmbedded -}}
-		if je, ok := interface{}(self.{{$f.GetNameMaybeType}}).(gJson.JSONEncodable); ok {
-			first = !encoder.EmbedEncodedStruct(je, first) && first
+	{{if $f.IsEmbedded -}}
+
+	if je, ok := interface{}(self.{{$f.GetNameMaybeType}}).(gJson.JSONEncodable); ok {
+		first = !encoder.EmbedEncodedStruct(je, first) && first
+	} else {
+		first = !encoder.EmbedMarshaledStruct(self.{{$f.GetNameMaybeType}}, first) && first
+	}
+
+	{{else -}}
+
+	if {{$f.CantAvoidEncodingAttempt}} {
+		var d interface{}
+
+		if {{$f.MaybeStruct}} && reflect.ValueOf(self.{{$f.Name}}).Kind() == reflect.Struct {
+			d = &self.{{$f.Name}}
 		} else {
-			first = !encoder.EmbedMarshaledStruct(self.{{$f.GetNameMaybeType}}, first) && first
+			d = self.{{$f.Name}}
 		}
-		{{else -}}
 
-		{{$cond := $f.GetJSONOmitCondition -}}
+		var doEncode = true
+		if {{$f.HasJSONOmitEmpty}} { // has omitempty?
+			if eli, okCanElide := d.(gJson.Elidable); okCanElide {
+				doEncode = !eli.CanElide()
 
-		{{if ne $cond "true" -}}
-		if {{$cond}} {
-		{{end -}}
-
-		first = !encoder.EncodeKeyVal("{{$f.JsonName}}", self.{{$f.Name}}, first, false) && first
-
-		{{- if ne $cond "true" -}}
+			} else if zer, okCanZero := d.(gJson.Zeroable); okCanZero {
+				doEncode = !zer.IsZero()
+			}
 		}
-		{{- end -}}
-		{{end -}}
+
+		if doEncode {
+			first = !encoder.EncodeKeyVal({{printf "%q" $f.JsonName}}, d, first, {{$f.HasJSONOmitEmpty}}) && first
+		}
+	}
+
+	{{end -}}
 
 {{end}}
 
@@ -326,7 +363,9 @@ var struct_tmpl = `
 
 {{$struct.DoDocs -}}
 type {{$struct.Name}} struct {
+	{{- if $struct.HasPrivateFields}}
   private {{$privateType}}
+	{{- end}}
   {{- range $f := $struct.Fields}}
 	{{- if $f.IsEmbedded}}
 	{{printf "%s%s%s" $f.DoDocs $f.Type $f.GetSpaceAndTag}}
@@ -337,6 +376,7 @@ type {{$struct.Name}} struct {
 }
 
 
+{{- if $struct.HasPrivateFields}}
 type {{$privateType}} struct {
   {{- range $f := $struct.Fields}}
   {{- if $f.IsPrivate}}
@@ -348,11 +388,9 @@ type {{$privateType}} struct {
 
 // JSONEncode implements part of Golific's JSONEncodable interface.
 func (self *{{$privateType}}) JSONEncode(encoder *gJson.Encoder) bool {
-	{{- if $struct.HasPrivateFields}}
 	var first = true
-	{{- end -}}
 
-	{{- range $f := $struct.Fields -}}
+	{{ range $f := $struct.Fields -}}
 	{{- if $f.IsPrivate}}
 	{{template "JSONEncodeField" $f}}
 	{{end -}}
@@ -360,10 +398,14 @@ func (self *{{$privateType}}) JSONEncode(encoder *gJson.Encoder) bool {
 
   return !first
 }
+{{- end}}
 
 
 type {{$jsonType}} struct {
+  {{- if $struct.HasPrivateFields}}
   *{{- $privateType}}
+	{{end -}}
+
   {{- range $f := $struct.Fields}}
 	{{- if $f.IsEmbedded}}
 	{{printf "%s%s" $f.Type $f.GetSpaceAndTag}}
@@ -398,6 +440,10 @@ func (self *{{$struct.Name}}) {{$f.Write}} ( v {{$f.Type}} ) {
 
 // JSONEncode implements part of Golific's JSONEncodable interface.
 func (self *{{$struct.Name}}) JSONEncode(encoder *gJson.Encoder) bool {
+	if self == nil {
+		return encoder.EncodeNull(false)
+	}
+
 	encoder.WriteRawByte('{')
 
 	{{if $struct.HasPrivateFields}}
@@ -408,7 +454,7 @@ func (self *{{$struct.Name}}) JSONEncode(encoder *gJson.Encoder) bool {
 		var first = true
 	{{end}}
 
-	{{- range $f := $struct.Fields -}}
+	{{ range $f := $struct.Fields -}}
 	{{- if or $f.IsEmbedded $f.IsPublic}}
 	{{template "JSONEncodeField" $f}}
 	{{end -}}
@@ -416,14 +462,17 @@ func (self *{{$struct.Name}}) JSONEncode(encoder *gJson.Encoder) bool {
 
 	encoder.WriteRawByte('}')
 
-  return true
+  return true || !first
 }
 
 
 {{if $struct.DoJson}}
 func (self *{{$struct.Name}}) MarshalJSON() ([]byte, error) {
   return json.Marshal({{$jsonType}} {
+  	{{if $struct.HasPrivateFields}}
     &self.private,
+  	{{end -}}
+
     {{range $f := $struct.Fields -}}
     {{if or $f.IsEmbedded $f.IsPublic -}}
     self.{{$f.GetNameMaybeType}},
@@ -457,9 +506,16 @@ func (self *{{$struct.Name}}) UnmarshalJSON(j []byte) error {
 	{{- range $f := $struct.Fields -}}
 	{{- if $f.CouldBeJSON}}
 	if data, ok = m[{{printf "%q" $f.JsonNameCI}}]; ok {
-		if err = json.Unmarshal(data, &self{{if $f.IsPrivate}}.private{{end}}.{{$f.Name}}); err != nil {
-			return err
+		var temp struct{ {{$f.OriginalCode}} }
+		data = append(append([]byte("{ \"{{$f.JsonNameCI}}\":"), data...), '}')
+
+		if err = json.Unmarshal(data, &temp); err != nil {
+			return fmt.Errorf(
+				"Field: %s, Error: %s", {{printf "%q" $f.JsonNameCI}}, err.Error(),
+			)
 		}
+
+		self{{if $f.IsPrivate}}.private{{end}}.{{$f.Name}} = temp.{{$f.Name}}
 	}
 	{{end -}}
 	{{end -}}

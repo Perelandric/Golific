@@ -3,6 +3,7 @@ package gJson
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 )
 
 type JSONEncodable interface {
@@ -11,6 +12,10 @@ type JSONEncodable interface {
 
 type Elidable interface {
 	CanElide() bool
+}
+
+type Zeroable interface {
+	IsZero() bool
 }
 
 /*
@@ -26,16 +31,20 @@ func (e *Encoder) EmbedEncodedStruct(je JSONEncodable, isFirst bool) bool {
 	// TODO: Create a pool for this allocation
 	var tempE Encoder
 
+	fmt.Println("Encoding embedded")
+
 	if je.JSONEncode(&tempE) {
+		fmt.Println("Embedded had data")
 		return e.embedResult(tempE.Bytes(), isFirst)
 	}
+	fmt.Println("Embedded had no data")
 	return false
 }
 
 /*
 EmbedMarshaledStruct panics if the `m` parameter isn't a struct or pointer to a
 struct. It adds only the marshaled fields to the encoder.
-Returns `true` if `isFirst` was `true` and nothing was written.
+Returns `true` if anything was actually written.
 */
 func (e *Encoder) EmbedMarshaledStruct(m interface{}, isFirst bool) bool {
 	if m == nil {
@@ -62,7 +71,11 @@ func (e *Encoder) embedResult(b []byte, isFirst bool) bool {
 		}
 		return false
 
+	} else if string(res) == "null" {
+		// Do nothing
+		return false
+
 	} else {
-		panic("Expected a struct")
+		panic(fmt.Sprintf("Expected a struct; found: %s", res))
 	}
 }
