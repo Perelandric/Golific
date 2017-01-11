@@ -74,7 +74,7 @@ func (self *FileData) newUnion(fset *token.FileSet, tagText string,
 	}
 	union_repr.fset = fset
 
-	if err = union_repr.setDocsAndName(docs, spec); err != nil {
+	if err = union_repr.setDocsAndName(docs, spec, true); err != nil {
 		return err
 	}
 

@@ -131,7 +131,7 @@ func (self *FileData) newEnum(fset *token.FileSet, tagText string,
 	}
 	enum.fset = fset
 
-	if err = enum.setDocsAndName(docs, spec); err != nil {
+	if err = enum.setDocsAndName(docs, spec, true); err != nil {
 		return err
 	}
 
@@ -378,10 +378,10 @@ func (self {{$variantType}}) IsDefault() bool {
 	return self.{{$uniqField}} == {{$enum.GetDefaultValue}}
 }
 
-// CanElide returns true if the variant was designated as the default value, or if
+// IsZero returns true if the variant was designated as the default value, or if
 // there's no explicit default, and it has the zero value.
-// This implements the Elidable interface.
-func (self {{$variantType}}) CanElide() bool {
+// This implements the Zeroable interface.
+func (self {{$variantType}}) IsZero() bool {
 	return self.IsDefault()
 }
 

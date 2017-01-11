@@ -31,13 +31,13 @@ const (
 	hasCustomValue
 
 	// for struct
-	read
-	write
 	embedded
+	hasJsonTag
 	jsonOmitEmpty
-	hasPrivateFields
-	hasPublicFields
 	hasEmbeddedFields
+	hasPrivateJSON
+
+	privateJSON
 )
 
 type Flag struct {
@@ -93,15 +93,18 @@ type Base struct {
 	docs   []string
 }
 
-func (self *Base) setDocsAndName(docs []*ast.Comment, spec *ast.TypeSpec) error {
+func (self *Base) setDocsAndName(docs []*ast.Comment, spec *ast.TypeSpec, requirePfx bool) error {
 	for _, d := range docs {
 		self.docs = append(self.docs, d.Text)
 	}
 
-	if self.Name = spec.Name.Name; !strings.HasPrefix(self.Name, "__") {
-		return fmt.Errorf("struct %q must start with '__'", self.Name)
+	if self.Name = spec.Name.Name; requirePfx {
+		if !strings.HasPrefix(self.Name, "__") {
+			return fmt.Errorf("struct %q must start with '__'", self.Name)
+		}
+		self.Name = self.Name[2:] // slice away the '__'
 	}
-	self.Name = self.Name[2:] // slice away the '__'
+
 	return nil
 }
 

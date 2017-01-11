@@ -2,7 +2,6 @@ package gJson
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"strconv"
 	"unicode/utf8"
@@ -16,7 +15,7 @@ import (
 func (e *Encoder) EncodeKeyVal(k string, v interface{}, isFirst, canElide bool) bool {
 	var pos = e.b.Len()
 
-	fmt.Printf("Encoding: %s, %#v\n\n", k, v)
+	//	fmt.Printf("Encoding: %s, %#v\n\n", k, v)
 
 	if !isFirst {
 		e.writeByte(',')
@@ -71,22 +70,15 @@ func (e *Encoder) Encode(data interface{}, canElide bool) bool {
 		return e.EncodeFloat64(d, canElide)
 
 	default:
-		if canElide {
-			if de, ok := data.(Elidable); ok && de.CanElide() {
-				return false
-			}
+		v := reflect.ValueOf(data)
+		kind := v.Kind()
 
+		if canElide {
 			if de, ok := data.(Zeroable); ok && de.IsZero() {
 				return false
 			}
 
-			v := reflect.ValueOf(data)
-
-			if v.CanInterface() && v.IsNil() {
-				return false
-			}
-
-			switch v.Kind() {
+			switch kind {
 			case reflect.Array, reflect.Slice, reflect.Map:
 				if v.Len() == 0 {
 					return false
@@ -98,22 +90,22 @@ func (e *Encoder) Encode(data interface{}, canElide bool) bool {
 			}
 
 			if v.CanAddr() {
-				itf := v.Addr().Interface()
-
-				if de, ok := itf.(Elidable); ok && de.CanElide() {
-					return false
-				}
-				if de, ok := itf.(Zeroable); ok && de.IsZero() {
+				if de, ok := v.Addr().Interface().(Zeroable); ok && de.IsZero() {
 					return false
 				}
 			}
 		}
 
 		if je, ok := data.(JSONEncodable); ok {
-			if !je.JSONEncode(e) {
-				return e.EncodeNull(canElide)
+			if je.JSONEncode(e) {
+				return true
 			}
-			return true
+			return e.EncodeNull(canElide)
+		}
+
+		switch kind {
+		case reflect.Slice, reflect.Array:
+			return e.EncodeArray(data, canElide)
 		}
 	}
 
@@ -121,7 +113,7 @@ func (e *Encoder) Encode(data interface{}, canElide bool) bool {
 }
 
 func (e *Encoder) marshalFallback(d interface{}, canElide bool) bool {
-	fmt.Printf("Marshal fallback on: %#v\n\n", d)
+	//	fmt.Printf("Marshal fallback on: %#v\n\n", d)
 
 	if b, err := json.Marshal(d); err == nil && len(b) > 0 {
 		e.write(b)
@@ -143,6 +135,49 @@ func (e *Encoder) EncodeStruct(s interface{}, canElide bool) bool {
 
 }
 */
+
+func (e *Encoder) EncodeArray(s interface{}, canElide bool) bool {
+	v := reflect.ValueOf(s)
+
+	switch v.Kind() {
+	case reflect.Slice, reflect.Array:
+	default: // Can't be encoded as an Array
+		return false
+	}
+
+	ln := v.Len()
+
+	if canElide && ln == 0 {
+		return false
+	}
+
+	e.WriteRawByte('[')
+
+	for i := 0; i < ln; i += 1 {
+		if i != 0 {
+			e.WriteRawByte(',')
+		}
+
+		item := v.Index(i)
+		if item.IsNil() {
+			e.EncodeNull(false)
+			continue
+		}
+
+		itf := item.Interface()
+
+		if enc, ok := itf.(JSONEncodable); ok {
+			if !enc.JSONEncode(e) {
+				e.EncodeNull(false)
+			}
+		} else {
+			e.Encode(itf, false)
+		}
+	}
+
+	e.WriteRawByte(']')
+	return true
+}
 
 func (e *Encoder) EncodeBool(b bool, canElide bool) bool {
 	if b {

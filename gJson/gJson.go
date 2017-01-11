@@ -10,10 +10,6 @@ type JSONEncodable interface {
 	JSONEncode(*Encoder) bool
 }
 
-type Elidable interface {
-	CanElide() bool
-}
-
 type Zeroable interface {
 	IsZero() bool
 }
