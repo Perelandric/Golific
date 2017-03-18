@@ -35,7 +35,6 @@ func (self *StructDefaults) gatherFlags(tagText string) error {
 		default:
 			return UnknownFlag
 		}
-		return nil
 	})
 }
 
@@ -168,7 +167,6 @@ func (self *StructFieldRepr) gatherFlags(tagText string) error {
 		default:
 			return UnknownFlag
 		}
-		return nil
 	})
 }
 
