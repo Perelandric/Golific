@@ -28,7 +28,7 @@ The Enum descriptor syntax to create an enum named `Animal` that has three varia
 Note the following:
 - The `//go:generate Golific $GOFILE` is required for `go generate` to generated the new code.
 - The double underscore prefix on the name is a *requirement*.
-- The `int` type used for each field isn't necessarily the type that will be used to represent the variants in the end, but we need a type in the definition, so for consistency, consider `int` to be a requirement.
+- The `int` type used for each field isn't necessarily the type that will be used for the variants, but we need a type in the definition. For consistency, consider `int` to be a requirement.
 
 ``` go
 package main
