@@ -1,4 +1,10 @@
+
+
 # Golific
+
+***PLEASE NOTE:*** *The info in this documentation is **entirely** out of date, as I've changed how this works quite a lot. I will find time soon to update the documentation. Until then, my apologies.*
+
+---
 
 **Golific** is a tool for generating Go code using the `go:generate` tool. Currently there are two types of annotations: **&#64;struct** and **&#64;enum**. See descriptions below.
 
