@@ -27,6 +27,9 @@ Top of your source (below imports):
 ```
 
 Enum descriptor syntax in your source to create an enum named `Animal` that has three variants. Note the double underscore prefix on the name. This is a *requirement*.
+
+The `int` type used below isn't necessarily the type that will be used to represent the variants in the end, but we need a type in the definition, so for consistency, consider `int` to be a requirement at this time.
+
 ``` go
 /*
 @enum json:"string"
@@ -56,7 +59,7 @@ res := Resident{
   Pet:  Animal.Dog, // Assign one of the variants
 }
 
-// The `json:"string"` option we included causes our custom `gString` value to be used when marshaled as JSON data
+// The `json:"string"` option we included causes our `gString` value to be used when marshaled as JSON
 j, err := json.Marshal(&res)
 
 fmt.Printf("%s %v\n", j, err) // {"Name":"Charlie Brown","Pet":"doggie"} <nil>
@@ -70,13 +73,13 @@ for _, animal := range Animal.Values {
 **Please note:** This will create a new file with the same name as the original, except that it will have the prefix `golific____` added, so if your file is `animal.go`, the file `golific____animal.go` will be created, ***overwriting*** any existing file.
 
 # FAQ
-###General
+### General
  - **Why was this created?**
   - Primarily in order to achieve greater type safety by restricting values of an enum type to only those variants provided.
  - **Can't this be done with `const` and a type alias?**
   - Yes, however a value of the base type can be substituted accidentally, resulting in bugs. Also, using `const` pollutes the variable namespace, which can be an issue when overlapping names are needed in different categories.
 
-###Functionality
+### Functionality
  - **How are the variants stored and referenced?**
   - For each enum, the variants are stored together in an anonymous struct value assigned to a variable. They are referenced as `Animal.Dog`.
  - **Can I get the numeric representation of a variant?**
@@ -96,7 +99,7 @@ for _, animal := range Animal.Values {
  - **Can I enumerate the variants of an enum using a `range` loop?**
   - Yes, an array holding the variants is generated, which can be used in a `range` loop.
 
-###Efficiency
+### Efficiency
  - **How are the variants represented in memory?**
   - The individual variants are stored as a value of a struct type that has a single `uint` field, sized to the smallest size needed for each given enum.
  - **Does each variant being a struct value add extra memory overhead?**
@@ -108,7 +111,7 @@ for _, animal := range Animal.Values {
  - **Does Golific use interfaces or pointers as the type of its variants?**
   - No, the `type` of the variants is a concrete, value type. Assigning or passing makes a copy, which equals the specific size of the `uint` used for that enum.
 
-###Safety
+### Safety
  - **Is it still possible to use a value of the base (struct) type in place of one of the variants?**
   - Technically yes, however the variants for each enum use a struct type with a `value` field that has a unique identifier appended to it, e.g. `value_1cn7iw6qxr8ad`, so substituting a base value would be cumbersome and never accidental.
  - **Are the new unique identifiers used in the variants' structs generated every time `generate` is run?**
