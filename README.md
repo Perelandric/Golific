@@ -15,19 +15,20 @@
 
 This is a short example of how the basic syntax looks and how it's used. See the documentation for more info.
 
-Installation:
+**Installation:**
+
 ```
 go install github.com/Perelandric/Golific
 ```
 
-Top of your source (below imports):
-``` go
-//go:generate Golific $GOFILE
-```
+**Example:**
 
-Enum descriptor syntax in your source to create an enum named `Animal` that has three variants. Note the double underscore prefix on the name. This is a *requirement*.
+The Enum descriptor syntax to create an enum named `Animal` that has three variants is shown in the example below.
 
-The `int` type used below isn't necessarily the type that will be used to represent the variants in the end, but we need a type in the definition, so for consistency, consider `int` to be a requirement at this time.
+Note the following:
+- The `//go:generate Golific $GOFILE` is required for `go generate` to generated the new code.
+- The double underscore prefix on the name is a *requirement*.
+- The `int` type used for each field isn't necessarily the type that will be used to represent the variants in the end, but we need a type in the definition, so for consistency, consider `int` to be a requirement.
 
 ``` go
 package main
