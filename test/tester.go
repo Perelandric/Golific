@@ -16,18 +16,19 @@ type __Animal struct {
 	Horse int `gString:"horsie" gDescription:"Has a very long face"`
 }
 
+// Use the resulting AnimalEnum in your code
 type Resident struct {
 	Name string
-	Pet  AnimalEnum // The generated type for your Animal enum
+	Pet  AnimalEnum
 }
 
 func main() {
 	res := Resident{
 		Name: "Charlie Brown",
-		Pet:  Animal.Dog, // Assign one of the variants
+		Pet:  Animal.Dog, // Use the Animal namespace to assign a variant
 	}
 
-	// The `json:"string"` option we included causes our custom `gString` value to be used when marshaled as JSON data
+	// The `json:"string"` option causes our `gString` value to be used when marshaled as JSON
 	j, err := json.Marshal(&res)
 
 	fmt.Printf("%s %v\n", j, err) // {"Name":"Charlie Brown","Pet":"doggie"} <nil>

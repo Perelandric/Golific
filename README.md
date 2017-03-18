@@ -30,13 +30,45 @@ Enum descriptor syntax in your source to create an enum named `Animal` that has 
 The `int` type used below isn't necessarily the type that will be used to represent the variants in the end, but we need a type in the definition, so for consistency, consider `int` to be a requirement at this time.
 
 ``` go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+)
+
+//go:generate Golific $GOFILE
+
 /*
 @enum json:"string"
 */
 type __Animal struct {
-  Dog   int `gString:"doggie" gDescription:"Loves to lick your face"`
-  Cat   int `gString:"kitty" gDescription:"Loves to scratch your face"`
-  Horse int `gString:"horsie" gDescription:"Has a very long face"`
+	Dog   int `gString:"doggie" gDescription:"Loves to lick your face"`
+	Cat   int `gString:"kitty" gDescription:"Loves to scratch your face"`
+	Horse int `gString:"horsie" gDescription:"Has a very long face"`
+}
+
+// Use the resulting AnimalEnum in your code
+type Resident struct {
+	Name string
+	Pet  AnimalEnum
+}
+
+func main() {
+	res := Resident{
+		Name: "Charlie Brown",
+		Pet:  Animal.Dog, // Use the Animal namespace to assign a variant
+	}
+
+	// The `json:"string"` option causes our `gString` value to be used when marshaled as JSON
+	j, err := json.Marshal(&res)
+
+	fmt.Printf("%s %v\n", j, err) // {"Name":"Charlie Brown","Pet":"doggie"} <nil>
+
+	// Enumerate all the variants in a range loop
+	for _, animal := range Animal.Values {
+		fmt.Printf("Kind: %s, Description: %q\n", animal, animal.Description())
+	}
 }
 ```
 
@@ -45,29 +77,6 @@ Run Go's `generate` tool from the project directory:
 go generate
 ```
 
-Use the enum in your code:
-
-``` go
-type Resident struct {
-  Name string
-  Pet  AnimalEnum // The generated type for your Animal enum
-}
-
-res := Resident{
-  Name: "Charlie Brown",
-  Pet:  Animal.Dog, // Assign one of the variants
-}
-
-// The `json:"string"` option we included causes our `gString` value to be used when marshaled as JSON
-j, err := json.Marshal(&res)
-
-fmt.Printf("%s %v\n", j, err) // {"Name":"Charlie Brown","Pet":"doggie"} <nil>
-
-// Enumerate all the variants in a range loop
-for _, animal := range Animal.Values {
-  fmt.Printf("Kind: %s, Description: %q\n", animal, animal.Description())
-}
-```
 
 **Please note:** This will create a new file with the same name as the original, except that it will have the prefix `golific____` added, so if your file is `animal.go`, the file `golific____animal.go` will be created, ***overwriting*** any existing file.
 
