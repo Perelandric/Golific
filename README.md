@@ -32,9 +32,9 @@ Enum descriptor syntax in your source to create an enum named `Animal` that has 
 @enum json:"string"
 */
 type __Animal struct {
-	Dog   int `gString:"doggie" gDescription:"Loves to lick your face"`
-	Cat   int `gString:"kitty" gDescription:"Loves to scratch your face"`
-	Horse int `gString:"horsie" gDescription:"Has a very long face"`
+  Dog   int `gString:"doggie" gDescription:"Loves to lick your face"`
+  Cat   int `gString:"kitty" gDescription:"Loves to scratch your face"`
+  Horse int `gString:"horsie" gDescription:"Has a very long face"`
 }
 ```
 
