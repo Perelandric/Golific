@@ -32,9 +32,9 @@ Enum descriptor syntax in your source to create an enum named `Animal` that has 
 @enum json:"string"
 */
 type __Animal struct {
-	Dog   int `gString:"doggie", gDescription:"Loves to lick your face"`
-	Cat   int `gString:"kitty", gDescription:"Loves to scratch your face"`
-	Horse int `gString:"horsie", gDescription:"Has a very long face"`
+	Dog   int `gString:"doggie" gDescription:"Loves to lick your face"`
+	Cat   int `gString:"kitty" gDescription:"Loves to scratch your face"`
+	Horse int `gString:"horsie" gDescription:"Has a very long face"`
 }
 ```
 
@@ -47,23 +47,23 @@ Use the enum in your code:
 
 ``` go
 type Resident struct {
- Name string
- Pet  AnimalEnum // The generated type for your Animal enum
+  Name string
+  Pet  AnimalEnum // The generated type for your Animal enum
 }
 
 res := Resident{
- Name: "Charlie Brown",
- Pet:  Animal.Dog, // Assign one of the variants
+  Name: "Charlie Brown",
+  Pet:  Animal.Dog, // Assign one of the variants
 }
 
 // The `json:"string"` option we included causes our custom `gString` value to be used when marshaled as JSON data
 j, err := json.Marshal(&res)
 
-fmt.Printf("%s %s\n", j, err) // {"Name":"Charlie Brown","Pet":"doggie"} <nil>
+fmt.Printf("%s %v\n", j, err) // {"Name":"Charlie Brown","Pet":"doggie"} <nil>
 
 // Enumerate all the variants in a range loop
 for _, animal := range Animal.Values {
- fmt.Printf("Kind: %s, Description: %q\n", animal, animal.Description())
+  fmt.Printf("Kind: %s, Description: %q\n", animal, animal.Description())
 }
 ```
 
