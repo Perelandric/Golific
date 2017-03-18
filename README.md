@@ -1,5 +1,4 @@
 
-
 # Golific
 
 **Golific** is a tool for generating Go code using the `go:generate` tool. Currently there are two types of annotations: **&#64;struct** and **&#64;enum**. See descriptions below.
@@ -74,48 +73,48 @@ for _, animal := range Animal.Values {
 
 # FAQ
 ### General
- - **Why was this created?**
+- **Why was this created?**
   - Primarily in order to achieve greater type safety by restricting values of an enum type to only those variants provided.
- - **Can't this be done with `const` and a type alias?**
+- **Can't this be done with `const` and a type alias?**
   - Yes, however a value of the base type can be substituted accidentally, resulting in bugs. Also, using `const` pollutes the variable namespace, which can be an issue when overlapping names are needed in different categories.
 
 ### Functionality
- - **How are the variants stored and referenced?**
+- **How are the variants stored and referenced?**
   - For each enum, the variants are stored together in an anonymous struct value assigned to a variable. They are referenced as `Animal.Dog`.
- - **Can I get the numeric representation of a variant?**
+- **Can I get the numeric representation of a variant?**
   - Yes, by using the `.Value()` or `.IntValue()` method.
- - **Will Golific generate bitflag numbers for me?**
+- **Will Golific generate bitflag numbers for me?**
   - Yes, by using the `bitflags` option.
- - **Can I choose the numeric representation?**
+- **Can I choose the numeric representation?**
   - Yes, as long as the `bitflags` option is not used, and the number doesn't match another value in the same enum.
- - **Can negative numbers be used for the numeric representation?**
+- **Can negative numbers be used for the numeric representation?**
   - No, the numbers must be `0` or greater and it is recommended that `0` be reserved to denote no value having been set, unless a default variant makes sense.
- - **Can I get the name of a variant as a `string`? If so, can I define a string that differs from the variant name?**
+- **Can I get the name of a variant as a `string`? If so, can I define a string that differs from the variant name?**
   - Yes, the `.Name()` method gives you the name and the `.String()` method gives you an optional custom string defined using the `gString` flag.
- - **Can meta data be associated with each variant?**
+- **Can meta data be associated with each variant?**
   - Yes, each variant can have a description assigned using the `--description` flag, which is accessed using the `.Description()` method.
- - **Can I have JSON marshaled to and unmarshaled from the string value instead of the number?**
+- **Can I have JSON marshaled to and unmarshaled from the string value instead of the number?**
   - Yes, using the `json` option.
- - **Can I enumerate the variants of an enum using a `range` loop?**
+- **Can I enumerate the variants of an enum using a `range` loop?**
   - Yes, an array holding the variants is generated, which can be used in a `range` loop.
 
 ### Efficiency
- - **How are the variants represented in memory?**
+- **How are the variants represented in memory?**
   - The individual variants are stored as a value of a struct type that has a single `uint` field, sized to the smallest size needed for each given enum.
- - **Does each variant being a struct value add extra memory overhead?**
+- **Does each variant being a struct value add extra memory overhead?**
   - No, variants that, for example, use a `uint8`, will still use only 8 bits.
- - **Does the `.Value()` call add overhead when getting the underlying number?**
+- **Does the `.Value()` call add overhead when getting the underlying number?**
   - Only if the compiler does not inline the call. However, the method simply returns the value of the field, so it would seem about as likely a candidate for inlining as one can hope to find.
- - **Does Golific use reflection?**
+- **Does Golific use reflection?**
   - No, because the code is generated, we can hardcode necessary values into `switch` statements where needed, making the generated code longer, but faster.
- - **Does Golific use interfaces or pointers as the type of its variants?**
+- **Does Golific use interfaces or pointers as the type of its variants?**
   - No, the `type` of the variants is a concrete, value type. Assigning or passing makes a copy, which equals the specific size of the `uint` used for that enum.
 
 ### Safety
- - **Is it still possible to use a value of the base (struct) type in place of one of the variants?**
+- **Is it still possible to use a value of the base (struct) type in place of one of the variants?**
   - Technically yes, however the variants for each enum use a struct type with a `value` field that has a unique identifier appended to it, e.g. `value_1cn7iw6qxr8ad`, so substituting a base value would be cumbersome and never accidental.
- - **Are the new unique identifiers used in the variants' structs generated every time `generate` is run?**
+- **Are the new unique identifiers used in the variants' structs generated every time `generate` is run?**
   - Yes. A pseudo-random number is used with a time-based seed, so it is non-deterministic.
- - **Is it possible to overwrite one variant with another from the same enum?**
+- **Is it possible to overwrite one variant with another from the same enum?**
   - Unfortunately, Go does not allow struct values to be assigned to a `const`, so yes. However it would require `Animal.Cat = Animal.Horse`, which seems like an unlikely mistake.
 
