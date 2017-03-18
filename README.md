@@ -25,11 +25,6 @@ go install github.com/Perelandric/Golific
 
 The Enum descriptor syntax to create an enum named `Animal` that has three variants is shown in the example below.
 
-Note the following:
-- The `//go:generate Golific $GOFILE` is required for `go generate` to generated the new code.
-- The double underscore prefix on the name is a *requirement*.
-- The `int` type used for each field isn't necessarily the type that will be used for the variants, but we need a type in the definition. For consistency, consider `int` to be a requirement.
-
 ``` go
 package main
 
@@ -73,11 +68,17 @@ func main() {
 }
 ```
 
+Note the following:
+- The `@enum json:"string"` in the comment above `type __Animal struct` is tells Golific to generate the enums.
+- The `//go:generate Golific $GOFILE` is required for `go generate` to generated the new code.
+- The double underscore prefix on the name is a *requirement*.
+- The `int` type used for each field isn't necessarily the type that will be used for the variants, but we need a type in the definition. For consistency, consider `int` to be a requirement.
+
+
 Run Go's `generate` tool from the project directory:
 ```
 go generate
 ```
-
 
 **Please note:** This will create a new file with the same name as the original, except that it will have the prefix `golific____` added, so if your file is `animal.go`, the file `golific____animal.go` will be created, ***overwriting*** any existing file.
 
